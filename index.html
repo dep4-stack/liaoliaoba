@@ -463,9 +463,12 @@
   function diffDays(a, b) { return Math.round((dObj(b) - dObj(a)) / 86400000); }
   function niceDate(d) { const [, m, dd] = d.split('-').map(Number); return m + '月' + dd + '日（' + WD[wd(d) - 1] + '）'; }
   function timeOptions(sel, from, to, value) {
-    let h = '';
-    for (let t = min(from); t <= min(to); t += 10) { const v = hm(t); h += `<option value="${v}"${v === value ? ' selected' : ''}>${v}</option>`; }
-    sel.innerHTML = h;
+    const lo = min(from), hi = min(to), set = new Set();
+    for (let t = lo; t <= hi; t += 10) set.add(t);
+    // 節次的上下課時間（如 08:35、12:05）不一定是 10 分鐘整數，一併加入選單
+    ((state.cfg && state.cfg.periods) || []).forEach(p => [p.start, p.end].forEach(x => { const t = min(x); if (t >= lo && t <= hi) set.add(t); }));
+    if (value) { const t = min(value); if (t >= lo && t <= hi) set.add(t); }
+    sel.innerHTML = [...set].sort((x, y) => x - y).map(t => { const v = hm(t); return `<option value="${v}"${v === value ? ' selected' : ''}>${v}</option>`; }).join('');
   }
   function store(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
   function load(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
@@ -606,7 +609,8 @@
     $('fDate').min = state.today; $('fDate').max = c.maxDate || ''; $('fDate').value = pre.date < state.today ? state.today : pre.date;
     let s = pre.start || c.open;
     if (min(s) < min(c.earliest)) s = c.earliest;
-    const e = hm(Math.min(min(s) + 50, min(c.latest)));
+    const per = (c.periods || []).find(p => p.start === s);
+    const e = per ? per.end : hm(Math.min(min(s) + 50, min(c.latest)));
     timeOptions($('fStart'), c.earliest, hm(min(c.latest) - 10), s);
     timeOptions($('fEnd'), hm(min(c.earliest) + 10), c.latest, e);
     document.querySelectorAll('input[name="zone"]').forEach(r => r.checked = r.value === (pre.zone || ''));
