@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>「聊聊吧」空間預約</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Huninn&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1d2a29;
+    --ink-soft: #55625f;
+    --teal: #1f4d4a;
+    --teal-2: #2d6a64;
+    --paper: #eef2ee;
+    --surface: #ffffff;
+    --line: #d3dbd5;
+    --mustard: #e9b23a;
+    --pt-bg: #f7d98c;  --pt-bd: #b9851a;
+    --co-bg: #bfe0da;  --co-bd: #35837a;
+    --ad-bg: #d9d4ec;  --ad-bd: #6a5fa6;
+    --ot-bg: #f1cdd6;  --ot-bd: #a3506a;
+    --err: #a3302a;
+    --ok: #2d6a3c;
+    --radius-s: 6px;
+    --radius-m: 12px;
+    --axis: 52px;
+    --body: "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
+    --round: "Huninn", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { font-family: var(--body); color: var(--ink); background: var(--paper); font-size: 15px; line-height: 1.6; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  :focus-visible { outline: 3px solid var(--mustard); outline-offset: 2px; }
+  [hidden] { display: none !important; }
+
+  /* 頁首：招牌是這一頁唯一的大動作 */
+  .top { background: var(--teal); color: #fff; padding: 22px 20px 26px; }
+  .top-inner { max-width: 1040px; margin: 0 auto; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+  .bubble {
+    position: relative; display: inline-block; background: #fff; color: var(--teal);
+    font-family: var(--round); font-size: clamp(30px, 6vw, 44px); line-height: 1;
+    padding: 14px 22px 12px; border-radius: 22px; letter-spacing: 1px;
+  }
+  .bubble::after {
+    content: ""; position: absolute; left: 26px; bottom: -13px; width: 0; height: 0;
+    border-left: 8px solid transparent; border-right: 14px solid transparent; border-top: 14px solid #fff;
+  }
+  .top h1 { margin: 0; font-size: 20px; font-weight: 600; }
+  .top p { margin: 2px 0 0; color: #cfe2de; font-size: 14px; }
+
+  .tabs { max-width: 1040px; margin: 0 auto; display: flex; gap: 4px; padding: 0 16px; transform: translateY(-1px); }
+  .tab {
+    border: 0; background: transparent; padding: 12px 16px 10px; cursor: pointer; color: var(--ink-soft);
+    border-bottom: 3px solid transparent; font-weight: 600;
+  }
+  .tab[aria-selected="true"] { color: var(--teal); border-bottom-color: var(--mustard); }
+  .tabbar { background: var(--surface); border-bottom: 1px solid var(--line); }
+
+  main { max-width: 1040px; margin: 0 auto; padding: 18px 16px 40px; }
+  h2 { font-size: 19px; margin: 0; }
+  h3 { font-size: 16px; margin: 0 0 8px; }
+
+  /* 週列 */
+  .weekbar { display: flex; align-items: stretch; gap: 6px; margin-bottom: 14px; }
+  .weekdays { flex: 1; display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .day {
+    border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius-s);
+    padding: 6px 2px; cursor: pointer; text-align: center; line-height: 1.25;
+  }
+  .day b { display: block; font-size: 17px; }
+  .day small { color: var(--ink-soft); font-size: 12px; }
+  .day .dots { display: block; height: 6px; margin-top: 3px; font-size: 0; }
+  .day .dots i { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--teal-2); margin: 0 1px; }
+  .day.weekend { background: #f6f7f5; }
+  .day.today b { color: var(--teal-2); text-decoration: underline; text-decoration-color: var(--mustard); text-decoration-thickness: 3px; text-underline-offset: 3px; }
+  .day[aria-pressed="true"] { background: var(--teal); border-color: var(--teal); color: #fff; }
+  .day[aria-pressed="true"] small { color: #cfe2de; }
+  .day[aria-pressed="true"].today b { color: #fff; }
+  .day[aria-pressed="true"] .dots i { background: var(--mustard); }
+  .navbtn { border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius-s); padding: 0 10px; cursor: pointer; font-size: 18px; }
+
+  .dayhead { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+  .dayhead h2 { margin-right: auto; }
+  .check { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--ink-soft); cursor: pointer; }
+
+  .btn { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 7px 16px; cursor: pointer; font-weight: 600; }
+  a.btn { text-decoration: none; color: var(--ink); display: inline-block; }
+  .btn.primary { background: var(--teal); border-color: var(--teal); color: #fff; }
+  .btn.primary:hover { background: var(--teal-2); }
+  .btn.small { padding: 4px 12px; font-size: 13px; }
+  .btn.danger { color: var(--err); border-color: #e3c2bf; }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .link { border: 0; background: none; color: var(--ink-soft); text-decoration: underline; cursor: pointer; padding: 0; font-size: 13px; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--ink-soft); margin-bottom: 10px; }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .legend i { width: 14px; height: 14px; border-radius: 3px; border-left: 4px solid; display: inline-block; }
+
+  /* 時間表 */
+  .grid-wrap { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-m); overflow-x: auto; }
+  .grid { min-width: 560px; }
+  .ghead { display: grid; grid-template-columns: var(--axis) 1fr; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--surface); z-index: 3; }
+  .gzones { display: grid; grid-template-columns: repeat(var(--n), 1fr); }
+  .gzones div { padding: 8px 6px; font-weight: 600; font-size: 14px; text-align: center; border-left: 1px solid var(--line); }
+  .gbody { display: grid; grid-template-columns: var(--axis) 1fr; }
+  .axis { position: relative; }
+  .axis span { position: absolute; right: 8px; transform: translateY(-50%); font-size: 12px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .area { position: relative; }
+  .hline { position: absolute; left: 0; right: 0; border-top: 1px solid #edf0ed; }
+  .hline.hour { border-top-color: var(--line); }
+  .closed { position: absolute; left: 0; right: 0; background: repeating-linear-gradient(-45deg, #f4f5f3 0 6px, #fafbfa 6px 12px); }
+  .cols { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(var(--n), 1fr); }
+  .col { border-left: 1px solid var(--line); cursor: copy; }
+  .col:hover { background: rgba(233, 178, 58, .08); }
+  .ev {
+    position: absolute; z-index: 2; border-radius: var(--radius-s); border-left: 4px solid; padding: 3px 6px;
+    font-size: 12px; line-height: 1.35; overflow: hidden; cursor: pointer; text-align: left; display: flex; flex-direction: column; justify-content: flex-start; align-items: flex-start; border-top: 0; border-right: 0; border-bottom: 0;
+  }
+  .ev b { display: block; font-size: 12.5px; }
+  .ev.pt { background: var(--pt-bg); border-color: var(--pt-bd); }
+  .ev.co { background: var(--co-bg); border-color: var(--co-bd); }
+  .ev.ad { background: var(--ad-bg); border-color: var(--ad-bd); }
+  .ev.ot { background: var(--ot-bg); border-color: var(--ot-bd); }
+  .ev.pending { background-image: repeating-linear-gradient(-45deg, rgba(255,255,255,.55) 0 5px, transparent 5px 10px); }
+  .ev.block { background: #e4e7e4; border-color: #8a948f; color: #3d4744; cursor: default; }
+  .ev.full { box-shadow: 0 0 0 1px rgba(29, 42, 41, .15); }
+  .nowline { position: absolute; left: 0; right: 0; border-top: 2px solid var(--err); z-index: 4; pointer-events: none; }
+  .hint { color: var(--ink-soft); font-size: 13px; margin: 8px 2px 0; }
+  .loading { padding: 40px; text-align: center; color: var(--ink-soft); }
+
+  /* 卡片與表單 */
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-m); padding: 18px; margin-bottom: 16px; }
+  .narrow { max-width: 460px; }
+  .field { display: block; margin-bottom: 12px; }
+  .field > span { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .field small { display: block; color: var(--ink-soft); font-size: 12px; margin-top: 3px; }
+  input[type=text], input[type=email], input[type=password], input[type=date], input[type=tel], select, textarea {
+    width: 100%; border: 1px solid #bfc9c3; border-radius: var(--radius-s); padding: 8px 10px; background: #fff;
+  }
+  textarea { min-height: 70px; resize: vertical; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .row3 { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 10px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip input { position: absolute; opacity: 0; pointer-events: none; }
+  .chip span { display: inline-block; border: 1px solid #bfc9c3; border-radius: 999px; padding: 5px 12px; cursor: pointer; font-size: 14px; background: #fff; }
+  .chip input:checked + span { background: var(--teal); border-color: var(--teal); color: #fff; }
+  .chip input:focus-visible + span { outline: 3px solid var(--mustard); outline-offset: 2px; }
+  .codes { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; font-size: 14px; }
+  .codes label { display: flex; gap: 6px; align-items: flex-start; cursor: pointer; }
+
+  .rules { list-style: none; padding: 0; margin: 0 0 14px; font-size: 13.5px; }
+  .rules li { padding: 6px 10px 6px 12px; border-left: 3px solid; margin-bottom: 5px; border-radius: 0 var(--radius-s) var(--radius-s) 0; background: #f6f8f6; }
+  .rules li.ok { border-color: var(--ok); }
+  .rules li.warn { border-color: var(--mustard); background: #fdf6e6; }
+  .rules li.err { border-color: var(--err); background: #fbeeed; color: var(--err); }
+  .msg-err { color: var(--err); font-size: 14px; margin: 8px 0 0; min-height: 1em; }
+
+  dialog { border: 0; border-radius: 16px; padding: 0; width: min(560px, calc(100vw - 24px)); max-height: calc(100vh - 32px); color: var(--ink); }
+  dialog::backdrop { background: rgba(20, 40, 38, .45); }
+  .dlg-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: #fff; z-index: 1; }
+  .dlg-body { padding: 16px 20px 20px; }
+  .x { border: 0; background: none; font-size: 22px; cursor: pointer; line-height: 1; padding: 4px 8px; color: var(--ink-soft); }
+  .dlg-foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+  .done { text-align: center; padding: 10px 0 4px; }
+  .done .big { font-family: var(--round); font-size: 26px; color: var(--teal); margin: 4px 0 8px; }
+  .done code { font-size: 18px; background: var(--paper); padding: 2px 10px; border-radius: 6px; }
+
+  .booking { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; padding: 12px 0; border-top: 1px solid var(--line); }
+  .booking:first-child { border-top: 0; }
+  .booking .when { font-weight: 600; }
+  .booking .meta { color: var(--ink-soft); font-size: 13.5px; }
+  .booking .acts { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+  .badge { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; border: 1px solid; margin-left: 6px; font-weight: 600; vertical-align: 1px; }
+  .badge.s-已成立 { color: var(--ok); border-color: #a9cbb2; }
+  .badge.s-待審核 { color: #8a6210; border-color: #e5c67c; background: #fdf6e6; }
+  .badge.s-已取消, .badge.s-未核准 { color: var(--ink-soft); border-color: var(--line); }
+  .badge.rec { color: var(--teal-2); border-color: #a8cfc9; }
+
+  .rulebook h3 { margin-top: 18px; }
+  .rulebook ul { padding-left: 20px; margin: 4px 0; }
+  .rulebook li { margin-bottom: 4px; max-width: 72ch; }
+
+  table.data { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  table.data th, table.data td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.data th { font-size: 12.5px; color: var(--ink-soft); font-weight: 600; white-space: nowrap; }
+  .tablewrap { overflow-x: auto; }
+  .subtabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+  .filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-bottom: 12px; }
+  .filters .field { margin: 0; }
+  .empty { color: var(--ink-soft); padding: 14px 0; }
+
+  footer { text-align: center; padding: 10px 0 30px; }
+  #toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); background: var(--ink); color: #fff;
+    padding: 10px 18px; border-radius: 999px; font-size: 14px; opacity: 0; pointer-events: none; transition: .25s; max-width: calc(100vw - 32px); z-index: 50;
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  @media (max-width: 640px) {
+    .row3 { grid-template-columns: 1fr 1fr; }
+    .row3 > :first-child { grid-column: 1 / -1; }
+    .codes { grid-template-columns: 1fr; }
+    .day b { font-size: 15px; }
+    .dayhead .btn.primary { width: 100%; }
+  }
+  @media (max-width: 640px) {
+    .grid { min-width: 0; }
+    .grid { --axis: 50px; }
+    .gzones div { font-size: 12px; padding: 6px 2px; }
+    .ev { font-size: 11px; padding: 2px 4px; }
+    .ev b { font-size: 11.5px; }
+    .day .dots i { width: 4px; height: 4px; margin: 0 .5px; }
+  }
+  .periods { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .pchip { border: 1px solid #bfc9c3; background: #fff; border-radius: 8px; padding: 6px 2px; font-weight: 600; line-height: 1.25; cursor: pointer; }
+  .pchip small { display: block; font-weight: 400; font-size: 11px; color: var(--ink-soft); }
+  .pchip.on { background: var(--teal); border-color: var(--teal); color: #fff; }
+  .pchip.on small { color: #cfe2de; }
+  .pchip:disabled { opacity: .4; cursor: default; }
+  .zonetabs { display: none; }
+  .ztab { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 7px 14px; white-space: nowrap; font-weight: 600; font-size: 14px; cursor: pointer; }
+  .ztab[aria-pressed="true"] { background: var(--teal); border-color: var(--teal); color: #fff; }
+  .linetip { background: #fdf6e6; border-bottom: 1px solid #e5c67c; color: #6b4d0c; padding: 10px 16px; font-size: 14px; text-align: center; }
+  @media (max-width: 640px) {
+    .zonetabs { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 8px; padding-bottom: 2px; }
+    input[type=text], input[type=email], input[type=date], select, textarea { font-size: 16px; }
+    dialog { width: calc(100vw - 16px); }
+    .dlg-body { padding: 14px 14px 18px; }
+    .chip span { padding: 7px 12px; }
+  }
+  @media (prefers-reduced-motion: reduce) { #toast { transition: none; } }
+</style>
+</head>
+<body>
+<div class="linetip" id="lineTip" hidden>你正在 LINE 裡開啟。若無法預約，請點右上角「⋯」→「用預設瀏覽器開啟」。</div>
+<header class="top">
+  <div class="top-inner">
+    <span class="bubble" id="spaceName">聊聊吧！</span>
+    <div>
+      <h1 id="title">親師交流空間 線上預約</h1>
+      <p id="placeLine">載入中…</p>
+    </div>
+  </div>
+</header>
+<div class="tabbar">
+  <nav class="tabs" role="tablist" id="tabs">
+    <button class="tab" role="tab" data-tab="board" aria-selected="true">預約狀況</button>
+    <button class="tab" role="tab" data-tab="rules" aria-selected="false">使用須知</button>
+    <button class="tab" role="tab" data-tab="admin" aria-selected="false" hidden id="adminTab">管理</button>
+  </nav>
+</div>
+
+<main>
+  <!-- 預約狀況 -->
+  <section id="tab-board">
+    <div class="weekbar">
+      <button class="navbtn" id="prevWeek" aria-label="上一週">‹</button>
+      <div class="weekdays" id="weekDays"></div>
+      <button class="navbtn" id="nextWeek" aria-label="下一週">›</button>
+    </div>
+    <div class="dayhead">
+      <h2 id="dayTitle"></h2>
+      <button class="btn small" id="todayBtn">回到今天</button>
+      <button class="btn primary" id="newBtn">預約這一天</button>
+    </div>
+    <div class="legend" id="legend"></div>
+    <div class="zonetabs" id="zoneTabs"></div>
+    <div class="grid-wrap"><div class="grid" id="grid"><div class="loading">載入預約狀況…</div></div></div>
+    <p class="hint">點時間表的空白處，就會帶入該區域與時間。斜線底色為不開放的時段（假日與開放時間外）。</p>
+  </section>
+
+  <!-- 我的預約 -->
+  <section id="tab-mine" hidden>
+    <div class="panel narrow" id="mineLogin">
+      <h3>查詢我的預約</h3>
+      <p class="hint" style="margin-top:0">輸入預約時填寫的 Email 與 4 位數密碼，就能取消預約或補填親師交流紀錄。</p>
+      <label class="field"><span>Email</span><input type="email" id="mEmail" autocomplete="email"></label>
+      <label class="field"><span>4 位數密碼</span><input type="password" id="mPin" inputmode="numeric" maxlength="4" autocomplete="off"></label>
+      <button class="btn primary" id="mLogin">查詢</button>
+      <p class="msg-err" id="mErr"></p>
+    </div>
+    <div id="mineList" hidden>
+      <div class="dayhead">
+        <h2 id="mineTitle">我的預約</h2>
+        <button class="btn small" id="mRefresh">重新整理</button>
+        <button class="btn small" id="mLogout">登出</button>
+      </div>
+      <div class="panel" id="mineItems"></div>
+    </div>
+  </section>
+
+  <!-- 使用須知 -->
+  <section id="tab-rules" hidden>
+    <div class="panel rulebook" id="rulebook"></div>
+  </section>
+
+  <!-- 管理 -->
+  <section id="tab-admin" hidden>
+    <div class="panel narrow" id="adminLogin">
+      <h3>總務處管理</h3>
+      <label class="field"><span>管理密碼</span><input type="password" id="aPw" autocomplete="current-password"></label>
+      <button class="btn primary" id="aLogin">登入管理</button>
+      <p class="msg-err" id="aErr"></p>
+    </div>
+    <div id="adminArea" hidden>
+      <div class="dayhead">
+        <h2>總務處管理</h2>
+        <a class="btn small" id="sheetLink" target="_blank" rel="noopener">開啟試算表</a>
+        <button class="btn small" id="aLogout">登出管理</button>
+      </div>
+      <div class="subtabs" id="subtabs">
+        <button class="btn small primary" data-sub="pending">待審核</button>
+        <button class="btn small" data-sub="list">預約清單</button>
+        <button class="btn small" data-sub="blocks">保留時段</button>
+        <button class="btn small" data-sub="records">交流紀錄與嘉獎</button>
+      </div>
+      <div class="panel" id="sub-pending"></div>
+      <div class="panel" id="sub-list" hidden>
+        <div class="filters">
+          <label class="field"><span>從</span><input type="date" id="lFrom"></label>
+          <label class="field"><span>到</span><input type="date" id="lTo"></label>
+          <label class="check"><input type="checkbox" id="lCancelled"> 含已取消／未核准</label>
+          <button class="btn small primary" id="lGo">查詢</button>
+          <button class="btn small" id="lExport">下載 Excel 報表</button>
+        </div>
+        <div id="lOut"></div>
+      </div>
+      <div class="panel" id="sub-blocks" hidden>
+        <h3>新增保留時段</h3>
+        <p class="hint" style="margin-top:0">用於教師會固定時段、學校日、校慶或段考等全校性活動。保留後，教師無法預約這些時段。</p>
+        <div class="row">
+          <label class="field"><span>類型</span>
+            <select id="kType"><option value="每週">每週固定</option><option value="單日">單一日期</option></select></label>
+          <label class="field" id="kWeekWrap"><span>星期</span>
+            <select id="kWeek"><option value="1">星期一</option><option value="2">星期二</option><option value="3">星期三</option><option value="4">星期四</option><option value="5">星期五</option><option value="6">星期六</option><option value="7">星期日</option></select></label>
+          <label class="field" id="kDateWrap" hidden><span>日期</span><input type="date" id="kDate"></label>
+        </div>
+        <label class="check" style="margin-bottom:10px"><input type="checkbox" id="kAllDay"> 全天</label>
+        <div class="row" id="kTimes">
+          <label class="field"><span>開始</span><select id="kStart"></select></label>
+          <label class="field"><span>結束</span><select id="kEnd"></select></label>
+        </div>
+        <div class="row">
+          <label class="field"><span>區域</span><select id="kZone"></select></label>
+          <label class="field"><span>事由</span><input type="text" id="kReason" placeholder="例如：教師會會議"></label>
+        </div>
+        <button class="btn primary" id="kAdd">新增保留時段</button>
+        <p class="msg-err" id="kErr"></p>
+        <h3 style="margin-top:18px">目前的保留時段</h3>
+        <div id="kOut"></div>
+      </div>
+      <div class="panel" id="sub-records" hidden>
+        <div class="filters">
+          <label class="field"><span>從</span><input type="date" id="rFrom"></label>
+          <label class="field"><span>到</span><input type="date" id="rTo"></label>
+          <button class="btn small primary" id="rGo">查詢</button>
+          <button class="btn small" id="rExport">匯出成紀錄表</button>
+        </div>
+        <p class="msg-err" id="rErr"></p>
+        <div id="rOut"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer><button class="link" id="adminLink">總務處管理</button></footer>
+
+<!-- 預約視窗 -->
+<dialog id="bookDlg" aria-labelledby="bookTitle">
+  <div class="dlg-head"><h2 id="bookTitle">預約空間</h2><button class="x" data-close aria-label="關閉">×</button></div>
+  <div class="dlg-body" id="bookForm">
+    <div class="row3">
+      <label class="field"><span>使用日期</span><input type="date" id="fDate"></label>
+      <label class="field"><span>開始</span><select id="fStart"></select></label>
+      <label class="field"><span>結束</span><select id="fEnd"></select></label>
+    </div>
+    <div class="field"><span>節次 <em style="font-weight:400;color:var(--ink-soft)">（點一節；要連續兩節，再點另一節）</em></span><div class="periods" id="fPeriods"></div></div>
+    <div class="field"><span>使用區域</span><div class="chips" id="fZones"></div>
+      <small>個別晤談區與共備／會議區可以分開預約、同時使用；多人交流或親職活動請預約全區。</small></div>
+    <div class="field"><span>用途</span><div class="chips" id="fPurposes"></div></div>
+    <label class="field"><span>用途說明 <em style="font-weight:400;color:var(--ink-soft)">（選填，例如「801 家長晤談」）</em></span>
+      <input type="text" id="fNote" maxlength="200"></label>
+    <div class="row">
+      <label class="field"><span>教師姓名</span><input type="text" id="fName" maxlength="30" autocomplete="name"></label>
+      <label class="field"><span>Email</span><input type="email" id="fEmail" autocomplete="email"></label>
+    </div>
+    <label class="check" style="margin-bottom:12px"><input type="checkbox" id="fRemember" checked> 在這台裝置記住我的姓名與 Email</label>
+    <ul class="rules" id="ruleBox"></ul>
+    <p class="msg-err" id="fErr"></p>
+    <div class="dlg-foot">
+      <button class="btn" data-close>取消</button>
+      <button class="btn primary" id="fSubmit">送出預約</button>
+    </div>
+  </div>
+  <div class="dlg-body" id="bookDone" hidden></div>
+</dialog>
+
+<!-- 交流紀錄視窗 -->
+<dialog id="recDlg" aria-labelledby="recTitle">
+  <div class="dlg-head"><h2 id="recTitle">填寫親師交流紀錄</h2><button class="x" data-close aria-label="關閉">×</button></div>
+  <div class="dlg-body">
+    <p class="hint" id="recInfo" style="margin-top:0"></p>
+    <div class="row">
+      <label class="field"><span>交流班級</span><input type="text" id="rCls" placeholder="例如：701"></label>
+      <label class="field"><span>交流對象</span><input type="text" id="rTarget" placeholder="例如：701家長"></label>
+    </div>
+    <div class="row">
+      <label class="field"><span>實際開始</span><select id="rStart"></select></label>
+      <label class="field"><span>實際結束</span><select id="rEnd"></select></label>
+    </div>
+    <div class="field"><span>交流重點（可複選）</span><div class="codes" id="rCodes"></div></div>
+    <label class="field" id="rOtherWrap" hidden><span>其他（請敘明）</span><input type="text" id="rOther" maxlength="100"></label>
+    <label class="field"><span>親師交流感動小故事 <em style="font-weight:400;color:var(--ink-soft)">（選填）</em></span>
+      <textarea id="rStory" maxlength="1000"></textarea>
+      <small>將收錄於成果報告，請去識別化，不要寫出學生與家長姓名。</small></label>
+    <p class="msg-err" id="recErr"></p>
+    <div class="dlg-foot">
+      <button class="btn" data-close>取消</button>
+      <button class="btn primary" id="recSave">儲存紀錄</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- 確認信的取消連結 -->
+<dialog id="cancelDlg" aria-labelledby="cancelTitle">
+  <div class="dlg-head"><h2 id="cancelTitle">取消預約</h2><button class="x" data-close aria-label="關閉">×</button></div>
+  <div class="dlg-body" id="cancelBody"><div class="loading">讀取中…</div></div>
+</dialog>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+  const WD = ['一', '二', '三', '四', '五', '六', '日'];
+  const PURPOSE_CLASS = { '親師交流': 'pt', '教師共備及專業對話': 'co', '行政會議': 'ad', '其他用途': 'ot' };
+  const PX = 1.15; // 每分鐘高度
+  const state = { cfg: null, today: '', date: '', weekStart: '', week: null, auth: null, pw: '', mine: [], recId: '' };
+  const $ = id => document.getElementById(id);
+  const MQ = window.matchMedia('(max-width: 640px)');
+  if (MQ.addEventListener) MQ.addEventListener('change', () => renderGrid()); else MQ.addListener(() => renderGrid());
+  if (/\bLine\//i.test(navigator.userAgent)) $('lineTip').hidden = false;
+
+  /* ---------- 共用工具 ---------- */
+  const API_URL = 'https://script.google.com/macros/s/AKfycbwWaBr6huPwKl4du3rz-nh295646iK-2aE3saqZvqfVM8syt4HbwS4Jqep8MqnwvWW8/exec';
+  function api(fn, ...args) {
+    return fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ fn, args }) })
+      .then(r => { if (!r.ok) throw new Error('伺服器暫時無法連線（' + r.status + '），請稍後再試。'); return r.json(); },
+        () => { throw new Error('連線失敗，請檢查網路後再試。'); })
+      .then(res => { if (!res || !res.ok) throw new Error((res && res.error) || '發生錯誤，請稍後再試。'); return res.data; });
+  }
+  function errText(e) { return (e && e.message ? e.message : String(e)).replace(/^Error:\s*/, ''); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+  function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 3200); }
+  function min(t) { const [h, m] = t.split(':').map(Number); return h * 60 + m; }
+  function hm(n) { return String(Math.floor(n / 60)).padStart(2, '0') + ':' + String(n % 60).padStart(2, '0'); }
+  function dObj(d) { const [y, m, dd] = d.split('-').map(Number); return new Date(Date.UTC(y, m - 1, dd)); }
+  function addDays(d, n) { const o = dObj(d); o.setUTCDate(o.getUTCDate() + n); return o.toISOString().slice(0, 10); }
+  function wd(d) { const w = dObj(d).getUTCDay(); return w === 0 ? 7 : w; }
+  function monday(d) { return addDays(d, 1 - wd(d)); }
+  function diffDays(a, b) { return Math.round((dObj(b) - dObj(a)) / 86400000); }
+  function niceDate(d) { const [, m, dd] = d.split('-').map(Number); return m + '月' + dd + '日（' + WD[wd(d) - 1] + '）'; }
+  function timeOptions(sel, from, to, value) {
+    let h = '';
+    for (let t = min(from); t <= min(to); t += 10) { const v = hm(t); h += `<option value="${v}"${v === value ? ' selected' : ''}>${v}</option>`; }
+    sel.innerHTML = h;
+  }
+  function store(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  function load(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
+  function checked(name) { const el = document.querySelector(`input[name="${name}"]:checked`); return el ? el.value : ''; }
+
+  /* ---------- 初始化 ---------- */
+  api('getInitData').then(res => {
+    state.cfg = res.config; state.today = res.today; state.date = res.today; state.weekStart = monday(res.today);
+    const c = state.cfg;
+    $('spaceName').textContent = c.space;
+    document.title = '「' + c.space.replace(/[！!]$/, '') + '」空間預約';
+    $('placeLine').textContent = c.school + '｜' + c.location;
+    $('legend').innerHTML = c.purposes.map(p => `<span><i style="background:var(--${PURPOSE_CLASS[p]}-bg);border-color:var(--${PURPOSE_CLASS[p]}-bd)"></i>${esc(p)}</span>`).join('')
+      + '<span><i style="background:#e4e7e4;border-color:#8a948f"></i>保留時段</span>'
+      + '<span><i style="background:repeating-linear-gradient(-45deg,#fff 0 3px,#ddd 3px 6px);border-color:#999"></i>待審核</span>';
+    $('fZones').innerHTML = c.zones.concat([c.fullArea]).map(z => `<label class="chip"><input type="radio" name="zone" value="${esc(z)}"><span>${esc(z)}</span></label>`).join('');
+    $('fPurposes').innerHTML = c.purposes.map(p => `<label class="chip"><input type="radio" name="purpose" value="${esc(p)}"><span>${esc(p)}${p === c.approvalPurpose ? '（需審核）' : ''}</span></label>`).join('');
+    $('rCodes').innerHTML = c.codes.map((t, i) => `<label><input type="checkbox" value="${i + 1}"> ${i + 1}. ${esc(t)}</label>`).join('');
+    $('fPeriods').innerHTML = (c.periods || []).map((p, i) => '<button type="button" class="pchip" data-i="' + i + '"'
+      + (p.end > c.close || p.start < c.open ? ' disabled title="超出開放時間"' : '') + '>' + esc(p.name) + '<small>' + p.start + '–' + p.end + '</small></button>').join('');
+    $('fPeriods').closest('.field').hidden = !(c.periods || []).length;
+    $('kZone').innerHTML = [c.fullArea].concat(c.zones).map(z => `<option>${esc(z)}</option>`).join('');
+    timeOptions($('kStart'), c.earliest, c.latest, c.open);
+    timeOptions($('kEnd'), c.earliest, c.latest, c.close);
+    renderRules();
+    const saved = load('chatbar-me');
+    if (saved && saved.email && saved.pin) { $('mEmail').value = saved.email; $('mPin').value = saved.pin; }
+    loadWeek();
+  }).catch(e => { $('grid').innerHTML = `<div class="loading">無法載入：${esc(errText(e))}</div>`; });
+
+  /* ---------- 分頁 ---------- */
+  $('tabs').addEventListener('click', e => { const b = e.target.closest('.tab'); if (b) showTab(b.dataset.tab); });
+  function showTab(name) {
+    document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', t.dataset.tab === name ? 'true' : 'false'));
+    ['board', 'mine', 'rules', 'admin'].forEach(n => $('tab-' + n).hidden = n !== name);
+    if (name === 'mine' && !state.auth && $('mEmail').value && $('mPin').value) loginMine();
+  }
+  $('adminLink').addEventListener('click', () => { $('adminTab').hidden = false; showTab('admin'); $('aPw').focus(); });
+
+  /* ---------- 預約狀況 ---------- */
+  function loadWeek() {
+    $('grid').innerHTML = '<div class="loading">載入預約狀況…</div>';
+    return api('getWeek', state.weekStart).then(w => { state.week = w; renderWeek(); renderGrid(); })
+      .catch(e => { $('grid').innerHTML = `<div class="loading">無法載入：${esc(errText(e))}</div>`; });
+  }
+  function renderWeek() {
+    const counts = {};
+    (state.week ? state.week.bookings : []).forEach(b => counts[b.date] = (counts[b.date] || 0) + 1);
+    let h = '';
+    for (let i = 0; i < 7; i++) {
+      const d = addDays(state.weekStart, i), n = counts[d] || 0;
+      const cls = ['day', wd(d) >= 6 ? 'weekend' : '', d === state.today ? 'today' : ''].join(' ');
+      h += `<button class="${cls}" data-date="${d}" aria-pressed="${d === state.date}" aria-label="${niceDate(d)}，${n} 筆預約">
+        <small>${WD[i]}</small><b>${Number(d.slice(8))}</b><span class="dots">${'<i></i>'.repeat(Math.min(n, 5))}</span></button>`;
+    }
+    $('weekDays').innerHTML = h;
+    $('dayTitle').textContent = niceDate(state.date) + (state.date === state.today ? '・今天' : '');
+  }
+  $('weekDays').addEventListener('click', e => { const b = e.target.closest('.day'); if (!b) return; state.date = b.dataset.date; renderWeek(); renderGrid(); });
+  $('prevWeek').addEventListener('click', () => { state.weekStart = addDays(state.weekStart, -7); state.date = state.weekStart; loadWeek(); });
+  $('nextWeek').addEventListener('click', () => { state.weekStart = addDays(state.weekStart, 7); state.date = state.weekStart; loadWeek(); });
+  $('todayBtn').addEventListener('click', () => {
+    state.date = state.today;
+    if (monday(state.today) !== state.weekStart) { state.weekStart = monday(state.today); loadWeek(); } else { renderWeek(); renderGrid(); }
+  });
+  $('newBtn').addEventListener('click', () => openBooking({ date: state.date }));
+  $('zoneTabs').addEventListener('click', e => { const b = e.target.closest('.ztab'); if (!b) return; state.zoneView = b.dataset.zone; renderGrid(); });
+
+  function dayItems() {
+    const w = state.week || { bookings: [], blocks: [] };
+    return { bookings: w.bookings.filter(b => b.date === state.date), blocks: w.blocks.filter(b => b.date === state.date) };
+  }
+  function viewRange(items) {
+    const c = state.cfg, late = false;
+    let from = min(late ? c.earliest : c.open), to = min(late ? c.latest : c.close);
+    items.bookings.forEach(b => { from = Math.min(from, min(b.start)); to = Math.max(to, min(b.end)); });
+    from = Math.floor(from / 30) * 30; to = Math.ceil(to / 30) * 30;
+    return [from, to];
+  }
+  function renderGrid() {
+    const c = state.cfg; if (!c) return;
+    if (c.zones.indexOf(state.zoneView) < 0) state.zoneView = c.zones[0];
+    $('zoneTabs').innerHTML = c.zones.map(z => '<button class="ztab" data-zone="' + esc(z) + '" aria-pressed="' + (z === state.zoneView) + '">' + esc(z) + '</button>').join('');
+    const zones = MQ.matches ? [state.zoneView] : c.zones;
+    const shown = z => z === c.fullArea || zones.indexOf(z) >= 0 || c.zones.indexOf(z) < 0;
+    const all = dayItems(), items = { bookings: all.bookings.filter(b => shown(b.zone)), blocks: all.blocks.filter(b => shown(b.zone)) };
+    const [from, to] = viewRange(all), n = zones.length, H = (to - from) * PX;
+    const y = t => (min(t) - from) * PX;
+    let axis = '', area = '';
+    for (let t = from; t <= to; t += 30) {
+      if (t > from && t < to) axis += `<span style="top:${(t - from) * PX}px">${hm(t)}</span>`;
+      area += `<div class="hline${t % 60 === 0 ? ' hour' : ''}" style="top:${(t - from) * PX}px"></div>`;
+    }
+    const open = min(c.open), close = min(c.close);
+    if (wd(state.date) >= 6) area += `<div class="closed" style="top:0;height:${H}px"></div>`;
+    else {
+      if (from < open) area += `<div class="closed" style="top:0;height:${(open - from) * PX}px"></div>`;
+      if (to > close) area += `<div class="closed" style="top:${(close - from) * PX}px;height:${(to - close) * PX}px"></div>`;
+    }
+    area += `<div class="cols">${zones.map(z => `<div class="col" data-zone="${esc(z)}" title="預約 ${esc(z)}"></div>`).join('')}</div>`;
+    const place = (zone) => {
+      const i = zones.indexOf(zone), full = zone === c.fullArea || i < 0 || n === 1;
+      return full ? 'left:3px;right:3px' : `left:calc(${(i / n) * 100}% + 3px);width:calc(${100 / n}% - 6px)`;
+    };
+    items.blocks.forEach(b => {
+      const s = b.start < hm(from) ? hm(from) : b.start, e = b.end > hm(to) ? hm(to) : b.end;
+      if (s >= e) return;
+      area += `<div class="ev block" style="top:${y(s)}px;height:${y(e) - y(s) - 2}px;${place(b.zone)}"><b>${esc(b.reason)}</b>${b.start}–${b.end}${b.zone === c.fullArea ? '・全區' : ''}</div>`;
+    });
+    items.bookings.forEach(b => {
+      const cls = ['ev', PURPOSE_CLASS[b.purpose] || 'ot', b.status === '待審核' ? 'pending' : '', b.zone === c.fullArea ? 'full' : ''].join(' ');
+      const label = `${b.start}–${b.end} ${b.name} ${b.purpose}${b.zone === c.fullArea ? '（全區）' : ''}${b.status === '待審核' ? '（待審核）' : ''}`;
+      area += `<button class="${cls}" data-info="${esc(label)}" aria-label="${esc(label)}" style="top:${y(b.start)}px;height:${Math.max(y(b.end) - y(b.start) - 2, 18)}px;${place(b.zone)}">
+        <b>${esc(b.name)}${b.zone === c.fullArea ? '・全區' : ''}</b>${b.start}–${b.end} ${esc(b.purpose)}${b.status === '待審核' ? '・待審核' : ''}</button>`;
+    });
+    if (state.date === state.today) {
+      const now = new Date(), nm = now.getHours() * 60 + now.getMinutes();
+      if (nm > from && nm < to) area += `<div class="nowline" style="top:${(nm - from) * PX}px"></div>`;
+    }
+    $('grid').style.setProperty('--n', n);
+    $('grid').innerHTML = `<div class="ghead"><div></div><div class="gzones">${zones.map(z => `<div>${esc(z)}</div>`).join('')}</div></div>
+      <div class="gbody"><div class="axis" style="height:${H}px">${axis}</div><div class="area" style="height:${H}px" data-from="${from}">${area}</div></div>`;
+  }
+  $('grid').addEventListener('click', e => {
+    const ev = e.target.closest('.ev');
+    if (ev) { if (ev.dataset.info) toast(ev.dataset.info); return; }
+    const col = e.target.closest('.col'); if (!col) return;
+    const area = col.closest('.area'), from = Number(area.dataset.from);
+    const offset = e.clientY - col.getBoundingClientRect().top;
+    const start = from + Math.floor(offset / PX / 30) * 30;
+    openBooking({ date: state.date, zone: col.dataset.zone, start: hm(start) });
+  });
+
+  /* ---------- 預約視窗 ---------- */
+  function openBooking(pre) {
+    const c = state.cfg, dlg = $('bookDlg');
+    $('bookForm').hidden = false; $('bookDone').hidden = true; $('fErr').textContent = '';
+    $('fDate').min = state.today; $('fDate').value = pre.date < state.today ? state.today : pre.date;
+    let s = pre.start || c.open;
+    if (min(s) < min(c.earliest)) s = c.earliest;
+    const e = hm(Math.min(min(s) + 50, min(c.latest)));
+    timeOptions($('fStart'), c.earliest, hm(min(c.latest) - 10), s);
+    timeOptions($('fEnd'), hm(min(c.earliest) + 10), c.latest, e);
+    document.querySelectorAll('input[name="zone"]').forEach(r => r.checked = r.value === (pre.zone || ''));
+    document.querySelectorAll('input[name="purpose"]').forEach(r => r.checked = false);
+    $('fNote').value = '';
+    const me = load('chatbar-me');
+    if (me) { $('fName').value = me.name || ''; $('fEmail').value = me.email || ''; }
+    state.pSel = []; syncPeriods();
+    updateRules();
+    dlg.showModal();
+  }
+  ['fDate', 'fStart', 'fEnd'].forEach(id => $(id).addEventListener('change', updateRules));
+  $('fZones').addEventListener('change', updateRules);
+  $('fPurposes').addEventListener('change', updateRules);
+  $('fStart').addEventListener('change', () => {
+    if ($('fEnd').value <= $('fStart').value) $('fEnd').value = hm(Math.min(min($('fStart').value) + 50, min(state.cfg.latest)));
+    updateRules();
+  });
+
+  $('fPeriods').addEventListener('click', e => {
+    const b = e.target.closest('.pchip'); if (!b || b.disabled) return;
+    const P = state.cfg.periods, i = Number(b.dataset.i), sel = state.pSel || [];
+    state.pSel = (sel.length === 1 && sel[0] !== i) ? [Math.min(sel[0], i), Math.max(sel[0], i)] : [i];
+    $('fStart').value = P[state.pSel[0]].start;
+    $('fEnd').value = P[state.pSel[state.pSel.length - 1]].end;
+    syncPeriods(); updateRules();
+  });
+  ['fStart', 'fEnd'].forEach(id => $(id).addEventListener('change', () => { state.pSel = []; syncPeriods(); }));
+  function syncPeriods() {
+    const s = $('fStart').value, e = $('fEnd').value, P = (state.cfg && state.cfg.periods) || [];
+    document.querySelectorAll('#fPeriods .pchip').forEach(b => { const p = P[Number(b.dataset.i)]; b.classList.toggle('on', !!p && p.start >= s && p.end <= e); });
+  }
+
+  function analyse() {
+    const c = state.cfg, d = $('fDate').value, s = $('fStart').value, e = $('fEnd').value, zone = checked('zone'), purpose = checked('purpose');
+    const out = []; let block = false;
+    if (!d) return { out: [{ t: 'err', m: '請選擇使用日期。' }], block: true };
+    if (d < state.today) { out.push({ t: 'err', m: '不能預約已經過去的日期。' }); block = true; }
+    if (s >= e) { out.push({ t: 'err', m: '結束時間需晚於開始時間。' }); block = true; }
+    const dur = min(e) - min(s);
+    if (purpose && dur > 0) {
+      const max = purpose === '親師交流' ? c.maxPT : c.maxMeet;
+      if (dur > max) { out.push({ t: 'err', m: `${purpose === '親師交流' ? '親師晤談以 1 節課為原則，' : '共備或會議'}每次最長 ${max} 分鐘，目前是 ${dur} 分鐘。` }); block = true; }
+    }
+    const after = wd(d) >= 6 || s < c.open || e > c.close;
+    if (after) {
+      out.push({ t: 'err', m: wd(d) >= 6 ? '假日不開放預約。' : '開放時間為 ' + c.open + '–' + c.close + '，請在這段時間內預約。' }); block = true;
+    } else if (purpose === c.approvalPurpose) {
+      out.push({ t: 'warn', m: '「其他用途」需經總務處同意，送出後待審核。請在用途說明簡述內容。' });
+    } else if (d === state.today) {
+      out.push({ t: 'warn', m: '今天的預約將記為「當日補登記」。平時請至少於使用前 1 個工作天預約。' });
+    }
+    if (purpose === '親師交流') out.push({ t: 'warn', m: '本空間各區無明顯隔間，邀約家長時請事先告知；擔心談話隱私請改借諮商室。家長到校請依訪客規定登記，並由教師陪同進出。' });
+    if (zone && state.week && d >= state.weekStart && d <= addDays(state.weekStart, 6)) {
+      const hit = z => zone === c.fullArea || z === c.fullArea || z === zone;
+      const blk = state.week.blocks.find(b => b.date === d && hit(b.zone) && b.start < e && s < b.end);
+      const clash = state.week.bookings.find(b => b.date === d && hit(b.zone) && b.start < e && s < b.end);
+      if (blk) { out.push({ t: 'err', m: `這個時段已保留給「${blk.reason}」（${blk.start}–${blk.end}）。` }); block = true; }
+      else if (clash) { out.push({ t: 'err', m: zone === c.fullArea && clash.zone !== c.fullArea
+        ? `預約全區需整個空間都沒人使用，但 ${clash.start}–${clash.end} ${clash.zone} 已有預約。`
+        : `這個時段已有預約：${clash.start}–${clash.end} ${clash.zone}（${clash.name}）。` }); block = true; }
+    }
+    if (!block && !after && purpose && purpose !== c.approvalPurpose && zone) out.push({ t: 'ok', m: `${dur} 分鐘，送出後立即成立。` });
+    return { out, block };
+  }
+  function updateRules() {
+    const { out } = analyse();
+    $('ruleBox').innerHTML = out.map(r => `<li class="${r.t}">${esc(r.m)}</li>`).join('');
+  }
+  $('fSubmit').addEventListener('click', () => {
+    $('fErr').textContent = '';
+    const f = { date: $('fDate').value, start: $('fStart').value, end: $('fEnd').value, zone: checked('zone'), purpose: checked('purpose'),
+      note: $('fNote').value.trim(), name: $('fName').value.trim(), email: $('fEmail').value.trim() };
+    if (!f.zone) return $('fErr').textContent = '請選擇使用區域。';
+    if (!f.purpose) return $('fErr').textContent = '請選擇用途。';
+    if (!f.name) return $('fErr').textContent = '請填寫教師姓名。';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email)) return $('fErr').textContent = '請填寫正確的 Email。';
+    if (analyse().block) return $('fErr').textContent = '請先修正上方標示紅色的項目。';
+    const btn = $('fSubmit'); btn.disabled = true; btn.textContent = '送出中…';
+    api('createBooking', f).then(r => {
+      if ($('fRemember').checked) store('chatbar-me', { name: f.name, email: f.email }); else store('chatbar-me', null);
+      $('bookForm').hidden = true; $('bookDone').hidden = false;
+      $('bookDone').innerHTML = `<div class="done">
+          <div class="big">${r.status === '已成立' ? '預約好了' : '已送出，等候審核'}</div>
+          <p>${niceDate(r.date)} ${r.start}–${r.end}・${esc(r.zone)}</p>
+          <p>預約編號 <code>${esc(r.id)}</code></p>
+          <p class="hint">${r.status === '已成立' ? '確認信已寄到你的信箱。' : '總務處審核後會寄信通知你。'}如需取消，請點確認信裡的「取消連結」。</p>
+          <div class="dlg-foot" style="justify-content:center"><button class="btn primary" data-close>完成</button></div></div>`;
+      if (r.date >= state.weekStart && r.date <= addDays(state.weekStart, 6)) { state.date = r.date; loadWeek(); }
+      else { state.date = r.date; state.weekStart = monday(r.date); loadWeek(); }
+    }).catch(e => { $('fErr').textContent = errText(e); })
+      .finally(() => { btn.disabled = false; btn.textContent = '送出預約'; });
+  });
+
+  document.addEventListener('click', e => { if (e.target.closest('[data-close]')) e.target.closest('dialog').close(); });
+
+  /* ---------- 我的預約 ---------- */
+  $('mLogin').addEventListener('click', loginMine);
+  $('mPin').addEventListener('keydown', e => { if (e.key === 'Enter') loginMine(); });
+  $('mRefresh').addEventListener('click', () => loadMine());
+  $('mLogout').addEventListener('click', () => {
+    state.auth = null; $('mPin').value = ''; $('mineList').hidden = true; $('mineLogin').hidden = false;
+    const me = load('chatbar-me'); if (me) { delete me.pin; store('chatbar-me', me); }
+  });
+  function loginMine() {
+    $('mErr').textContent = '';
+    state.auth = { email: $('mEmail').value.trim(), pin: $('mPin').value.trim() };
+    loadMine(true);
+  }
+  function loadMine(first) {
+    $('mineItems').innerHTML = '<div class="loading">讀取中…</div>';
+    if (first) { $('mineLogin').hidden = true; $('mineList').hidden = false; }
+    return api('getMyBookings', state.auth).then(list => { state.mine = list; renderMine(); })
+      .catch(e => { state.auth = null; $('mineList').hidden = true; $('mineLogin').hidden = false; $('mErr').textContent = errText(e); });
+  }
+  function renderMine() {
+    const list = state.mine;
+    $('mineTitle').textContent = list.length ? list[0].name + ' 老師的預約' : '我的預約';
+    if (!list.length) { $('mineItems').innerHTML = '<p class="empty">這個 Email 還沒有預約紀錄。到「預約狀況」點選時段就能預約。</p>'; return; }
+    const needRec = list.filter(b => b.purpose === '親師交流' && b.status === '已成立' && b.date <= state.today && !b.record).length;
+    $('mineItems').innerHTML = (needRec ? `<ul class="rules"><li class="warn">有 ${needRec} 筆親師交流尚未填寫紀錄。交流達 20 分鐘以上請補填，作為嘉獎依據。</li></ul>` : '')
+      + list.map(b => {
+        const active = b.status === '已成立' || b.status === '待審核';
+        const canCancel = active && b.date >= state.today;
+        const canRec = b.purpose === '親師交流' && b.status === '已成立' && b.date <= state.today;
+        return `<div class="booking">
+          <div><div class="when">${niceDate(b.date)} ${b.start}–${b.end}<span class="badge s-${esc(b.status)}">${esc(b.status)}</span>${b.record ? '<span class="badge rec">已填紀錄</span>' : ''}</div>
+          <div class="meta">${esc(b.zone)}・${esc(b.purpose)}${b.note ? '・' + esc(b.note) : ''}${b.cat && b.cat !== '一般' ? '・' + esc(b.cat) : ''}・編號 ${esc(b.id)}</div></div>
+          <div class="acts">${canRec ? `<button class="btn small primary" data-rec="${esc(b.id)}">${b.record ? '修改紀錄' : '填寫交流紀錄'}</button>` : ''}
+            ${canCancel ? `<button class="btn small danger" data-cancel="${esc(b.id)}">取消預約</button>` : ''}</div></div>`;
+      }).join('');
+  }
+  $('mineItems').addEventListener('click', e => {
+    const c = e.target.closest('[data-cancel]'), r = e.target.closest('[data-rec]');
+    if (c) {
+      const b = state.mine.find(x => x.id === c.dataset.cancel);
+      if (!confirm(`確定取消 ${niceDate(b.date)} ${b.start}–${b.end} 的預約？`)) return;
+      c.disabled = true;
+      api('cancelBooking', state.auth, b.id).then(() => { toast('已取消預約'); loadMine(); loadWeek(); })
+        .catch(err => { c.disabled = false; toast(errText(err)); });
+    }
+    if (r) openRecord(state.mine.find(x => x.id === r.dataset.rec), 'mine');
+  });
+
+  function openRecord(b, mode) {
+    const c = state.cfg, rec = b.record || {};
+    state.recId = b.id; state.recMode = mode; $('recErr').textContent = '';
+    $('recInfo').textContent = `${niceDate(b.date)} ${b.start}–${b.end}・${b.zone}${b.note ? '・' + b.note : ''}`;
+    $('rCls').value = rec.cls || ''; $('rTarget').value = rec.target || '';
+    timeOptions($('rStart'), c.earliest, c.latest, rec.start || b.start);
+    timeOptions($('rEnd'), c.earliest, c.latest, rec.end || b.end);
+    document.querySelectorAll('#rCodes input').forEach(i => i.checked = (rec.codes || []).indexOf(Number(i.value)) >= 0);
+    $('rOther').value = rec.other || ''; $('rStory').value = rec.story || '';
+    $('rOtherWrap').hidden = !(rec.codes || []).includes(10);
+    $('recDlg').showModal();
+  }
+  $('rCls').addEventListener('input', () => { if (!$('rTarget').dataset.touched) $('rTarget').value = $('rCls').value ? $('rCls').value + '家長' : ''; });
+  $('rTarget').addEventListener('input', () => $('rTarget').dataset.touched = '1');
+  $('rCodes').addEventListener('change', () => { $('rOtherWrap').hidden = !document.querySelector('#rCodes input[value="10"]').checked; });
+  $('recSave').addEventListener('click', () => {
+    const r = { cls: $('rCls').value, target: $('rTarget').value, start: $('rStart').value, end: $('rEnd').value,
+      codes: [...document.querySelectorAll('#rCodes input:checked')].map(i => Number(i.value)), other: $('rOther').value, story: $('rStory').value };
+    const btn = $('recSave'); btn.disabled = true; $('recErr').textContent = '';
+    (state.recMode === 'admin' ? api('adminSaveRecord', state.pw, state.recId, r) : Promise.reject(new Error('請聯絡總務處登錄交流紀錄。')))
+      .then(() => { $('recDlg').close(); toast('交流紀錄已儲存'); if (!$('sub-list').hidden) loadList(); })
+      .catch(e => $('recErr').textContent = errText(e)).finally(() => btn.disabled = false);
+  });
+
+  /* ---------- 使用須知 ---------- */
+  function renderRules() {
+    const c = state.cfg;
+    $('rulebook').innerHTML = `
+      <h3>誰可以使用</h3><ul><li>本校教職員。家長及校外人士應由本校教師陪同使用。</li>
+        <li>先登記者優先。同一時段同時申請時，依序為：親師交流、教師共備及專業對話、行政會議及其他經總務處同意之用途。</li>
+        <li>學校日、校慶等全校性活動當日，由學校統一規劃使用。</li></ul>
+      <h3>開放時間與預約</h3><ul><li>上課日 ${c.open} 至 ${c.close} 開放，以課餘時間使用為原則，不得影響課務及班務。</li>
+        <li>假日及 ${c.close} 以後不開放使用。</li>
+        <li>親師晤談以 1 節課為原則，最長 2 節（${c.maxPT} 分鐘）；共備或會議最長 2 小時（${c.maxMeet} 分鐘）。</li>
+        <li>至少於使用前 1 個工作天預約。空間未經預約時可以臨時使用，並於當日補登記。</li>
+        <li>個別晤談區與共備／會議區可分開預約、同時使用；多人交流或親職活動請預約全區。</li>
+        <li>預約後無法使用，請儘早點確認信裡的取消連結取消預約。</li></ul>
+      <h3>使用規範</h3><ul><li>家長到校依訪客規定登記，並由教師陪同進出。</li>
+        <li>各區之間無明顯區隔，邀約家長時請事先告知；擔心談話隱私請改借諮商室。</li>
+        <li>設備用畢關閉電源，損壞或故障請立即通報總務處，不得自行拆修。</li>
+        <li>可飲用茶水；咖啡、茶包等耗材請自備。</li>
+        <li>離開前桌椅歸位、清理桌面及杯具、關燈關冷氣、拉上捲簾，並確實關門。不得存放個人物品或長期占用。</li></ul>
+      <h3>親師交流紀錄</h3><ul><li>親師交流達 20 分鐘以上，請將交流班級與交流重點告知總務處，由總務處登錄交流紀錄。</li>
+        <li>參與教師核敘嘉獎一次；與超過半數班級家長交流，再核敘嘉獎一次。</li>
+        <li>歡迎分享去識別化的親師交流感動小故事，將收錄於成果報告。</li></ul>`;
+  }
+
+  /* ---------- 管理 ---------- */
+  $('aLogin').addEventListener('click', doAdminLogin);
+  $('aPw').addEventListener('keydown', e => { if (e.key === 'Enter') doAdminLogin(); });
+  $('aLogout').addEventListener('click', () => { state.pw = ''; $('aPw').value = ''; $('adminArea').hidden = true; $('adminLogin').hidden = false; });
+  function doAdminLogin() {
+    $('aErr').textContent = ''; const pw = $('aPw').value;
+    api('adminLogin', pw).then(res => {
+      state.pw = pw; $('adminLogin').hidden = true; $('adminArea').hidden = false;
+      $('sheetLink').href = res.sheetUrl; renderPending(res.pending);
+      const first = state.today.slice(0, 8) + '01';
+      $('lFrom').value = first; $('lTo').value = addDays(first, 62);
+      $('rFrom').value = first.slice(0, 5) + (Number(first.slice(5, 7)) >= 8 ? '08-01' : '02-01'); $('rTo').value = state.today;
+      if (Number(first.slice(5, 7)) === 1) $('rFrom').value = (Number(first.slice(0, 4)) - 1) + '-08-01';
+      showSub('pending');
+    }).catch(e => $('aErr').textContent = errText(e));
+  }
+  $('subtabs').addEventListener('click', e => { const b = e.target.closest('[data-sub]'); if (b) showSub(b.dataset.sub); });
+  function showSub(name) {
+    document.querySelectorAll('#subtabs [data-sub]').forEach(b => b.classList.toggle('primary', b.dataset.sub === name));
+    ['pending', 'list', 'blocks', 'records'].forEach(n => $('sub-' + n).hidden = n !== name);
+    if (name === 'pending') api('adminLogin', state.pw).then(r => renderPending(r.pending)).catch(e => toast(errText(e)));
+    if (name === 'list') loadList();
+    if (name === 'blocks') loadBlocks();
+    if (name === 'records') loadRecords();
+  }
+  function adminRow(b, actions) {
+    return `<div class="booking"><div><div class="when">${niceDate(b.date)} ${b.start}–${b.end}<span class="badge s-${esc(b.status)}">${esc(b.status)}</span></div>
+      <div class="meta">${esc(b.zone)}・${esc(b.purpose)}${b.note ? '・' + esc(b.note) : ''}・${esc(b.cat)}</div>
+      <div class="meta">${esc(b.name)}（${esc(b.email)}）・編號 ${esc(b.id)}・申請於 ${esc(b.created)}</div>
+      ${b.adminNote ? `<div class="meta" style="white-space:pre-line">${esc(b.adminNote)}</div>` : ''}</div>
+      <div class="acts">${actions}</div></div>`;
+  }
+  function renderPending(list) {
+    $('sub-pending').innerHTML = list.length
+      ? list.map(b => adminRow(b, `<button class="btn small primary" data-st="已成立" data-id="${esc(b.id)}">核准</button><button class="btn small danger" data-st="未核准" data-id="${esc(b.id)}">不核准</button>`)).join('')
+      : '<p class="empty">目前沒有待審核的申請。開放時間外的預約與「其他用途」會出現在這裡。</p>';
+  }
+  function loadList() {
+    $('lOut').innerHTML = '<div class="loading">讀取中…</div>';
+    api('adminList', state.pw, $('lFrom').value, $('lTo').value, $('lCancelled').checked).then(list => {
+      $('lOut').innerHTML = list.length ? `<p class="hint" style="margin-top:0">共 ${list.length} 筆</p>` + list.map(b => adminRow(b,
+        ((b.purpose === '親師交流' && b.status === '已成立' && b.date <= state.today) ? `<button class="btn small primary" data-arec="${esc(b.id)}">交流紀錄</button>` : '')
+        + ((b.status === '已成立' || b.status === '待審核') ? `<button class="btn small danger" data-st="已取消" data-id="${esc(b.id)}">取消</button>` : ''))).join('')
+        : '<p class="empty">這段期間沒有預約。</p>';
+    }).catch(e => $('lOut').innerHTML = `<p class="msg-err">${esc(errText(e))}</p>`);
+  }
+  $('lGo').addEventListener('click', loadList);
+  $('lOut').addEventListener('click', e => {
+    const a = e.target.closest('[data-arec]'); if (!a) return;
+    a.disabled = true;
+    api('adminRecordFor', state.pw, a.dataset.arec).then(b => openRecord(b, 'admin'))
+      .catch(err => toast(errText(err))).finally(() => { a.disabled = false; });
+  });
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-st]'); if (!b) return;
+    const st = b.dataset.st;
+    let note = '';
+    if (st !== '已成立') { note = prompt(st === '未核准' ? '請輸入不核准的原因（會寄給申請教師）：' : '請輸入取消原因（會寄給教師）：'); if (note === null) return; }
+    b.disabled = true;
+    api('adminSetStatus', state.pw, b.dataset.id, st, note).then(() => {
+      toast('已設為' + st); loadWeek();
+      if (!$('sub-pending').hidden) showSub('pending'); else loadList();
+    }).catch(err => { b.disabled = false; toast(errText(err)); });
+  });
+
+  function loadXLSX() {
+    if (window.XLSX) return Promise.resolve(window.XLSX);
+    return new Promise((ok, no) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+      s.onload = () => ok(window.XLSX);
+      s.onerror = () => no(new Error('無法載入 Excel 元件，請檢查網路後再試。'));
+      document.head.appendChild(s);
+    });
+  }
+  $('lExport').addEventListener('click', () => {
+    const from = $('lFrom').value, to = $('lTo').value, btn = $('lExport');
+    if (!from || !to) return toast('請先選擇日期區間');
+    btn.disabled = true; btn.textContent = '產生中…';
+    Promise.all([api('adminReport', state.pw, from, to), loadXLSX()]).then(([d, X]) => {
+      const dur = b => min(b.end) - min(b.start);
+      const hrs = m => Math.round(m / 6) / 10;
+      const ok = d.bookings.filter(b => b.status === '已成立');
+      const wb = X.utils.book_new();
+      const add = (name, rows, cols) => { const ws = X.utils.aoa_to_sheet(rows); ws['!cols'] = cols.map(w => ({ wch: w })); X.utils.book_append_sheet(wb, ws, name); };
+      add('預約明細', [['預約編號', '日期', '星期', '開始', '結束', '分鐘', '區域', '用途', '用途說明', '教師', 'Email', '狀態', '類別', '申請時間', '備註']]
+        .concat(d.bookings.map(b => [b.id, b.date, WD[wd(b.date) - 1], b.start, b.end, dur(b), b.zone, b.purpose, b.note, b.name, b.email, b.status, b.cat, b.created, b.adminNote])),
+        [10, 11, 5, 6, 6, 6, 14, 18, 22, 10, 26, 8, 10, 18, 30]);
+      const group = key => {
+        const m = {};
+        ok.forEach(b => { const k = key(b); m[k] = m[k] || [0, 0]; m[k][0]++; m[k][1] += dur(b); });
+        return Object.keys(m).sort().map(k => [k, m[k][0], hrs(m[k][1])]);
+      };
+      const st = [[d.school + ' ' + d.space + ' 使用統計'], ['期間', from + ' 至 ' + to], [],
+        ['成立筆數', ok.length], ['使用總時數', hrs(ok.reduce((s, b) => s + dur(b), 0))],
+        ['已取消／未核准', d.bookings.filter(b => b.status === '已取消' || b.status === '未核准').length],
+        ['待審核', d.bookings.filter(b => b.status === '待審核').length], []];
+      [['依月份', b => b.date.slice(0, 7)], ['依區域', b => b.zone], ['依用途', b => b.purpose], ['依教師', b => b.name]].forEach(([t, f]) => {
+        st.push([t, '筆數', '時數']); group(f).forEach(r => st.push(r)); st.push([]);
+      });
+      add('使用統計', st, [22, 18, 10]);
+      add('親師交流紀錄', [['日期', '開始', '結束', '班級', '教師', '交流對象', '交流重點代碼', '其他', '感動小故事']]
+        .concat(d.records.map(r => [r.date, r.start, r.end, r.cls, r.name, r.target, r.codes, r.other, r.story])),
+        [11, 6, 6, 8, 10, 14, 16, 16, 50]);
+      add('嘉獎彙整', [['教師', '交流次數', '交流班級數', '交流班級']]
+        .concat(d.stats.map(t => [t.name, t.count, t.classes.length, t.classes.join('、')])), [12, 10, 12, 40]);
+      X.writeFile(wb, '聊聊吧預約報表_' + from + '_' + to + '.xlsx');
+      toast('報表已下載');
+    }).catch(e => toast(errText(e))).finally(() => { btn.disabled = false; btn.textContent = '下載 Excel 報表'; });
+  });
+
+  $('kType').addEventListener('change', () => { const w = $('kType').value === '每週'; $('kWeekWrap').hidden = !w; $('kDateWrap').hidden = w; });
+  $('kAllDay').addEventListener('change', () => $('kTimes').hidden = $('kAllDay').checked);
+  $('kAdd').addEventListener('click', () => {
+    $('kErr').textContent = '';
+    const type = $('kType').value;
+    const bl = { type, when: type === '每週' ? $('kWeek').value : $('kDate').value, allDay: $('kAllDay').checked,
+      start: $('kStart').value, end: $('kEnd').value, zone: $('kZone').value, reason: $('kReason').value };
+    api('adminAddBlock', state.pw, bl).then(() => { toast('已新增保留時段'); $('kReason').value = ''; loadBlocks(); loadWeek(); })
+      .catch(e => $('kErr').textContent = errText(e));
+  });
+  function loadBlocks() {
+    $('kOut').innerHTML = '<div class="loading">讀取中…</div>';
+    api('adminBlocks', state.pw).then(list => {
+      $('kOut').innerHTML = list.length ? `<div class="tablewrap"><table class="data"><thead><tr><th>類型</th><th>時間</th><th>區域</th><th>事由</th><th></th></tr></thead><tbody>`
+        + list.map(b => `<tr><td>${b.type === '每週' ? '每週' : '單日'}</td><td>${b.type === '每週' ? '星期' + WD[Number(b.when) - 1] : esc(b.when)} ${b.start ? b.start + '–' + b.end : '全天'}</td>
+          <td>${esc(b.zone)}</td><td>${esc(b.reason)}</td><td><button class="btn small danger" data-delblock="${esc(b.id)}">刪除</button></td></tr>`).join('')
+        + '</tbody></table></div>' : '<p class="empty">尚未設定保留時段。</p>';
+    }).catch(e => $('kOut').innerHTML = `<p class="msg-err">${esc(errText(e))}</p>`);
+  }
+  $('kOut').addEventListener('click', e => {
+    const b = e.target.closest('[data-delblock]'); if (!b || !confirm('確定刪除這個保留時段？')) return;
+    api('adminDeleteBlock', state.pw, b.dataset.delblock).then(() => { toast('已刪除'); loadBlocks(); loadWeek(); }).catch(err => toast(errText(err)));
+  });
+
+  function loadRecords() {
+    $('rErr').textContent = ''; $('rOut').innerHTML = '<div class="loading">讀取中…</div>';
+    api('adminRecords', state.pw, $('rFrom').value, $('rTo').value).then(res => {
+      const recs = res.records, stats = res.stats;
+      if (!recs.length) { $('rOut').innerHTML = '<p class="empty">這段期間還沒有交流紀錄。</p>'; return; }
+      $('rOut').innerHTML = `<h3>嘉獎彙整</h3><p class="hint" style="margin-top:0">參與教師核敘嘉獎一次；交流班級數超過任教班級半數者再核敘一次（任教班級數請自行對照）。</p>
+        <div class="tablewrap"><table class="data"><thead><tr><th>教師</th><th>交流次數</th><th>交流班級數</th><th>交流班級</th></tr></thead><tbody>`
+        + stats.map(t => `<tr><td>${esc(t.name)}</td><td>${t.count}</td><td>${t.classes.length}</td><td>${esc(t.classes.join('、'))}</td></tr>`).join('')
+        + `</tbody></table></div><h3 style="margin-top:20px">交流紀錄（${recs.length} 筆）</h3>
+        <div class="tablewrap"><table class="data"><thead><tr><th>日期</th><th>時間</th><th>班級</th><th>教師</th><th>交流對象與重點代碼</th><th>小故事</th></tr></thead><tbody>`
+        + recs.map(r => `<tr><td>${esc(r.date)}</td><td>${r.start}–${r.end}</td><td>${esc(r.cls)}</td><td>${esc(r.name)}</td>
+          <td>${esc(r.target)}；${esc(r.codes)}${r.other ? '（' + esc(r.other) + '）' : ''}</td><td>${esc(r.story)}</td></tr>`).join('')
+        + '</tbody></table></div>';
+    }).catch(e => $('rOut').innerHTML = `<p class="msg-err">${esc(errText(e))}</p>`);
+  }
+  $('rGo').addEventListener('click', loadRecords);
+  $('rExport').addEventListener('click', () => {
+    const btn = $('rExport'); btn.disabled = true; $('rErr').textContent = '';
+    api('adminExportRecords', state.pw, $('rFrom').value, $('rTo').value).then(res => {
+      $('rErr').innerHTML = `<span style="color:var(--ok)">已建立「${esc(res.name)}」。</span> <a href="${esc(res.url)}" target="_blank" rel="noopener">開啟紀錄表</a>`;
+    }).catch(e => $('rErr').textContent = errText(e)).finally(() => btn.disabled = false);
+  });
+
+  /* ---------- 確認信的取消連結 ---------- */
+  (function () {
+    const q = new URLSearchParams(location.search), id = q.get('cancel'), t = q.get('t');
+    if (!id || !t) return;
+    const body = $('cancelBody');
+    $('cancelDlg').addEventListener('close', () => history.replaceState(null, '', location.pathname));
+    $('cancelDlg').showModal();
+    api('cancelInfo', id, t).then(b => {
+      if (!b.found) { body.innerHTML = '<p>找不到這筆預約，或連結已失效。如需協助請聯絡總務處。</p>'; return; }
+      const info = `<p>${niceDate(b.date)} ${b.start}–${b.end}<br>${esc(b.zone)}・${esc(b.purpose)}<br>${esc(b.name)} 老師・編號 ${esc(b.id)}</p>`;
+      if (b.status !== '已成立' && b.status !== '待審核') { body.innerHTML = info + `<p>這筆預約已${esc(b.status)}。</p>`; return; }
+      if (b.past) { body.innerHTML = info + '<p>已過使用日期的預約無法取消。</p>'; return; }
+      body.innerHTML = info + '<p class="msg-err" id="cErr"></p><div class="dlg-foot"><button class="btn" data-close>不取消</button><button class="btn danger" id="cGo">確定取消這筆預約</button></div>';
+      $('cGo').addEventListener('click', () => {
+        const btn = $('cGo'); btn.disabled = true; btn.textContent = '處理中…';
+        api('cancelByToken', id, t).then(() => {
+          body.innerHTML = info + '<p style="color:var(--ok);font-weight:600">已取消預約。</p><div class="dlg-foot"><button class="btn primary" data-close>完成</button></div>';
+          if (state.cfg) loadWeek();
+        }).catch(e => { btn.disabled = false; btn.textContent = '確定取消這筆預約'; $('cErr').textContent = errText(e); });
+      });
+    }).catch(e => { body.innerHTML = `<p class="msg-err">${esc(errText(e))}</p>`; });
+  })();
+</script>
+</body>
+</html>
