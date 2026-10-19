@@ -654,7 +654,7 @@
     if (after) {
       out.push({ t: 'err', m: wd(d) >= 6 ? '假日不開放預約。' : '開放時間為 ' + c.open + '–' + c.close + '，請在這段時間內預約。' }); block = true;
     } else if (purpose === c.approvalPurpose) {
-      out.push({ t: 'warn', m: '「其他用途」需經總務處同意，送出後待審核。請在用途說明簡述內容。' });
+      out.push({ t: 'warn', m: '「其他用途」需經總務處同意，送出後待審核，請電話通知事務組長。請在用途說明簡述內容。' });
     } else if (d === state.today) {
       out.push({ t: 'warn', m: '今天的預約將記為「當日補登記」。平時請至少於使用前 1 個工作天預約。' });
     }
@@ -692,7 +692,7 @@
           <div class="big">${r.status === '已成立' ? '預約好了' : '已送出，等候審核'}</div>
           <p>${niceDate(r.date)} ${r.start}–${r.end}・${esc(r.zone)}</p>
           <p>預約編號 <code>${esc(r.id)}</code></p>
-          <p class="hint">${r.status === '已成立' ? '確認信已寄到你的信箱。' : '總務處審核後會寄信通知你。'}如需取消，請點確認信裡的「取消連結」。</p>
+          <p class="hint">${r.status === '已成立' ? '確認信已寄到你的信箱。' : '<b style="color:#8a6210">此申請需審核，請電話通知事務組長。</b>總務處審核後會寄信通知你。'}如需取消，請點確認信裡的「取消連結」。</p>
           <div class="dlg-foot" style="justify-content:center"><button class="btn primary" data-close>完成</button></div></div>`;
       if (r.date >= state.weekStart && r.date <= addDays(state.weekStart, 6)) { state.date = r.date; loadWeek(); }
       else { state.date = r.date; state.weekStart = monday(r.date); loadWeek(); }
