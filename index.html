@@ -215,6 +215,7 @@
     .day .dots i { width: 4px; height: 4px; margin: 0 .5px; }
   }
   .periods { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  @media (min-width: 560px) { .periods { grid-template-columns: repeat(5, 1fr); } }
   .pchip { border: 1px solid #bfc9c3; background: #fff; border-radius: 8px; padding: 6px 2px; font-weight: 600; line-height: 1.25; cursor: pointer; }
   .pchip small { display: block; font-weight: 400; font-size: 11px; color: var(--ink-soft); }
   .pchip.on { background: var(--teal); border-color: var(--teal); color: #fff; }
@@ -602,7 +603,7 @@
   function openBooking(pre) {
     const c = state.cfg, dlg = $('bookDlg');
     $('bookForm').hidden = false; $('bookDone').hidden = true; $('fErr').textContent = '';
-    $('fDate').min = state.today; $('fDate').value = pre.date < state.today ? state.today : pre.date;
+    $('fDate').min = state.today; $('fDate').max = c.maxDate || ''; $('fDate').value = pre.date < state.today ? state.today : pre.date;
     let s = pre.start || c.open;
     if (min(s) < min(c.earliest)) s = c.earliest;
     const e = hm(Math.min(min(s) + 50, min(c.latest)));
@@ -644,6 +645,7 @@
     const out = []; let block = false;
     if (!d) return { out: [{ t: 'err', m: '請選擇使用日期。' }], block: true };
     if (d < state.today) { out.push({ t: 'err', m: '不能預約已經過去的日期。' }); block = true; }
+    if (c.maxDate && d > c.maxDate) { out.push({ t: 'err', m: `目前只開放 ${c.bookMonths || 1} 個月內的預約，最遠可預約到 ${niceDate(c.maxDate)}。` }); block = true; }
     if (s >= e) { out.push({ t: 'err', m: '結束時間需晚於開始時間。' }); block = true; }
     const dur = min(e) - min(s);
     if (purpose && dur > 0) {
