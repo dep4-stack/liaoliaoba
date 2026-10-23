@@ -243,6 +243,7 @@
   .chip em { font-style: normal; font-size: 12px; margin-left: 2px; }
   .chip input:not(:checked) + span em.left { color: var(--teal-2); }
   .chip input:not(:checked) + span em.full { color: var(--err); }
+  .ev .key { font-size: 11px; margin-right: 2px; }
   .gzones div small { display: block; font-weight: 400; font-size: 11px; color: var(--ink-soft); }
   .poster { display: block; width: 100%; height: auto; border-radius: var(--radius-m); border: 1px solid var(--line); margin-bottom: 16px; background: #fbf7ef; }
   .cardnote { text-align: left; background: #fdf6e6; border-left: 3px solid var(--mustard); border-radius: 0 var(--radius-s) var(--radius-s) 0; padding: 8px 12px; font-size: 14px; margin: 10px 0; }
@@ -521,7 +522,8 @@
     $('placeLine').textContent = c.school + '｜' + c.location;
     $('legend').innerHTML = c.purposes.map(p => `<span><i style="background:var(--${PURPOSE_CLASS[p]}-bg);border-color:var(--${PURPOSE_CLASS[p]}-bd)"></i>${esc(p)}</span>`).join('')
       + '<span><i style="background:#e4e7e4;border-color:#8a948f"></i>保留時段</span>'
-      + '<span><i style="background:repeating-linear-gradient(-45deg,#fff 0 3px,#ddd 3px 6px);border-color:#999"></i>待審核</span>';
+      + '<span><i style="background:repeating-linear-gradient(-45deg,#fff 0 3px,#ddd 3px 6px);border-color:#999"></i>待審核</span>'
+      + '<span>🔑 該節第一位登記者（負責領取感應卡）</span>';
     $('fZones').innerHTML = c.zones.concat([c.fullArea]).map(z => `<label class="chip"><input type="radio" name="zone" value="${esc(z)}"><span>${esc(z)}<em></em></span></label>`).join('');
     $('fZoneHint').textContent = '各區可以分開預約、同時使用。每節名額：' + c.zones.map(z => z + ' ' + capOf(z).max + ' ' + capOf(z).unit).join('、') + '；額滿的區域無法登記。';
     $('fPurposes').innerHTML = c.purposes.map(p => `<label class="chip"><input type="radio" name="purpose" value="${esc(p)}"><span>${esc(p)}${p === c.approvalPurpose ? '（請說明・需審核）' : ''}</span></label>`).join('');
@@ -640,9 +642,10 @@
     });
     items.bookings.forEach(b => {
       const cls = ['ev', PURPOSE_CLASS[b.purpose] || 'ot', b.status === '待審核' ? 'pending' : '', b.zone === c.fullArea ? 'full' : ''].join(' ');
-      const label = `${b.start}–${b.end} ${b.name} ${b.purpose}${b.people ? '・' + b.people + '人' : ''}${b.zone === c.fullArea ? '（全區）' : ''}${b.status === '待審核' ? '（待審核）' : ''}`;
+      const card = (b.card || []).length ? b.card : null;
+      const label = `${b.start}–${b.end} ${b.name} ${b.purpose}${b.people ? '・' + b.people + '人' : ''}${b.zone === c.fullArea ? '（全區）' : ''}${b.status === '待審核' ? '（待審核）' : ''}${card ? '・負責領取感應卡（' + card.join('、') + '）' : ''}`;
       area += `<button class="${cls}" data-info="${esc(label)}" aria-label="${esc(label)}" style="top:${y(b.start)}px;height:${Math.max(y(b.end) - y(b.start) - 2, 18)}px;${place(b.zone, lane[b.id], lanes[b.zone])}">
-        <b>${esc(b.name)}${b.zone === c.fullArea ? '・全區' : ''}${capOf(b.zone).unit === '人' && b.people ? '・' + esc(b.people) + '人' : ''}</b>${b.start}–${b.end} ${esc(b.purpose)}${b.status === '待審核' ? '・待審核' : ''}</button>`;
+        <b>${card ? '<span class="key" title="負責領取感應卡">🔑</span>' : ''}${esc(b.name)}${b.zone === c.fullArea ? '・全區' : ''}${capOf(b.zone).unit === '人' && b.people ? '・' + esc(b.people) + '人' : ''}</b>${b.start}–${b.end} ${esc(b.purpose)}${b.status === '待審核' ? '・待審核' : ''}</button>`;
     });
     if (state.date === state.today) {
       const now = new Date(), nm = now.getHours() * 60 + now.getMinutes();
@@ -934,8 +937,8 @@
         <li>使用日前 ${c.bookMonths || 1} 個月起開放線上登記，依登記順序借用。至少於使用前 1 個工作天預約；空間未經預約時可以臨時使用，並於當日補登記。</li>
         <li>各區獨立登記、可同時使用，每節名額：${c.zones.map(z => esc(z) + ' ' + capOf(z).max + ' ' + capOf(z).unit).join('、')}。額滿就無法再登記。</li>
         <li>有特殊或高隱私需求，可預約「${esc(c.fullArea)}」並註明事由。</li>
-        <li>完成登記後，請到個人信箱確認是否預約成功；使用前一天會再寄提醒信。</li>
-        <li>同一節第一位登記者，使用前請先至總務處領取感應卡，使用後立即歸還。系統會在確認信與提醒信中通知你。</li>
+        <li>完成登記後，請到個人信箱確認是否預約成功；使用前一天會再寄提醒信，使用結束前 10 分鐘會寄離場提醒。</li>
+        <li>同一節第一位登記者（時間表上標 🔑），使用前請先至總務處領取感應卡，使用後立即歸還。若第一位登記者取消，系統會自動通知下一位接手領卡。</li>
         <li>若因故取消行程，請到「取消預約」頁，或點確認信裡的取消連結，主動撤銷、釋出借用名額。</li></ul>
       <h3>使用規範</h3><ul><li>家長到校依訪客規定登記，並由教師陪同進出。</li>
         <li>各區之間無明顯區隔，邀約家長時請事先告知；擔心談話隱私請改借諮商室。</li>
