@@ -668,6 +668,9 @@
   /* ---------- 預約視窗（以節為單位） ---------- */
   function capOf(zone) { const c = state.cfg; return (c && c.capacity && c.capacity[zone]) || { max: 1, unit: '組' }; }
   function periods() { return (state.cfg && state.cfg.periods) || []; }
+  function nowHM() { const n = new Date(); return String(n.getHours()).padStart(2, '0') + ':' + String(n.getMinutes()).padStart(2, '0'); }
+  /** 今天已結束的節次不能再預約 */
+  function ended(d, p) { return d === state.today && p.end <= nowHM(); }
   function selRange() {
     const P = periods(), sel = state.pSel || [];
     return sel.length ? { s: P[sel[0]].start, e: P[sel[sel.length - 1]].end } : { s: '', e: '' };
@@ -715,7 +718,7 @@
       const t = pre.start;
       let i = P.findIndex(p => p.start <= t && t < p.end);
       if (i < 0) i = P.findIndex(p => p.start >= t);
-      if (i >= 0 && !(P[i].end > c.close || P[i].start < c.open)) state.pSel = [i];
+      if (i >= 0 && !(P[i].end > c.close || P[i].start < c.open) && !ended($('fDate').value, P[i])) state.pSel = [i];
     }
     document.querySelectorAll('input[name="zone"]').forEach(r => r.checked = r.value === (pre.zone || ''));
     document.querySelectorAll('input[name="purpose"]').forEach(r => r.checked = false);
@@ -741,16 +744,17 @@
 
   /** 依日期、區域更新節次按鈕與區域按鈕的名額狀態 */
   function updateAvail() {
+    if ((state.pSel || []).length && ended($('fDate').value, periods()[state.pSel[0]])) state.pSel = [];
     const c = state.cfg, d = $('fDate').value, zone = checked('zone'), P = periods(), sel = state.pSel || [];
     const w = d ? weekOf(d) : null, { s, e } = selRange();
     document.querySelectorAll('#fPeriods .pchip').forEach(b => {
-      const i = Number(b.dataset.i), p = P[i], off = !!b.dataset.off;
-      const r = (w && zone && !off) ? check(w, d, zone, p.start, p.end, 1) : { msg: '' };
+      const i = Number(b.dataset.i), p = P[i], off = !!b.dataset.off, past = ended(d, p);
+      const r = (w && zone && !off && !past) ? check(w, d, zone, p.start, p.end, 1) : { msg: '' };
       const full = !!(r.msg && r.full);
       b.classList.toggle('on', sel.length > 0 && i >= sel[0] && i <= sel[sel.length - 1]);
       b.classList.toggle('full', full);
-      b.disabled = off || (full && !b.classList.contains('on'));
-      b.querySelector('small').textContent = full ? '額滿' : (r.left != null && r.left < capOf(zone).max ? '剩 ' + r.left + ' 位' : p.start + '–' + p.end);
+      b.disabled = off || past || (full && !b.classList.contains('on'));
+      b.querySelector('small').textContent = past ? '已結束' : full ? '額滿' : (r.left != null && r.left < capOf(zone).max ? '剩 ' + r.left + ' 位' : p.start + '–' + p.end);
     });
     document.querySelectorAll('input[name="zone"]').forEach(r => {
       const em = r.nextElementSibling.querySelector('em');
@@ -777,6 +781,8 @@
     if (c.maxDate && d > c.maxDate) { out.push({ t: 'err', m: `目前只開放 ${c.bookMonths || 1} 個月內的預約，最遠可預約到 ${niceDate(c.maxDate)}。` }); block = true; }
     if (wd(d) >= 6) { out.push({ t: 'err', m: '假日不開放預約。' }); block = true; }
     if (!s) { out.push({ t: 'warn', m: '請點選要使用的節次。' }); return { out, block: true }; }
+    const fp = periods().find(p => p.start === s);
+    if (fp && ended(d, fp)) { out.push({ t: 'err', m: '今天的這個節次已經結束，請改選還沒結束的節次。' }); block = true; }
     const dur = min(e) - min(s);
     if (purpose) {
       const max = purpose === '親師交流' ? c.maxPT : c.maxMeet;
