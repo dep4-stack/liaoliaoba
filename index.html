@@ -409,6 +409,14 @@
     .tab { font-size: 15px; }
     .btn { box-shadow: 1.5px 2px 0 rgba(58, 42, 34, .85); }
   }
+
+  /* 手機瀏覽器（含 LINE 等內建瀏覽器）：視窗高度以實際可見範圍計算，避免預約視窗被上下工具列遮住 */
+  dialog { max-height: calc(100vh - 32px); max-height: calc(100dvh - 24px); overscroll-behavior: contain; }
+  input[type=date] { -webkit-appearance: none; appearance: none; display: block; min-width: 0; max-width: 100%; min-height: 42px; text-align: left; }
+  input[type=date]::-webkit-date-and-time-value { text-align: left; }
+  @media (max-width: 640px) {
+    dialog { width: calc(100vw - 16px); max-height: calc(100vh - 16px); max-height: calc(100dvh - 16px); margin: auto; }
+  }
 </style>
 </head>
 <body>
@@ -890,6 +898,7 @@
     delete state.wc[monday($('fDate').value)]; // 開視窗時重抓這一週，名額才會是最新的
     updateRules();
     dlg.showModal();
+    dlg.scrollTop = 0;
   }
   $('fDate').addEventListener('change', updateRules);
   $('fPeople').addEventListener('input', updateRules);
