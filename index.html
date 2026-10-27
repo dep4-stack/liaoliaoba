@@ -6,7 +6,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>「聊聊吧」空間預約</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Huninn&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&display=swap" rel="stylesheet">
+<link rel="icon" href="sign.webp">
+<meta name="theme-color" content="#faf4e8">
 <style>
   :root {
     --ink: #1d2a29;
@@ -283,15 +286,144 @@
     #bookForm .dlg-foot .btn { flex: 1; }
   }
   @media (prefers-reduced-motion: reduce) { #toast { transition: none; } }
+
+  /* ================= 手繪風格（東湖國中・聊聊BAR） ================= */
+  :root {
+    --ink: #3a2a22;
+    --ink-soft: #7a6252;
+    --teal: #4a2c20;
+    --teal-2: #8a5a3c;
+    --paper: #faf4e8;
+    --surface: #fffdf8;
+    --line: #e4d5bf;
+    --mustard: #e2a33b;
+    --bar-red: #d23a2f;
+    --bar-orange: #c8692a;
+    --err: #b0302a;
+    --ok: #3f7a3a;
+    --body: "LXGW WenKai TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+    --round: var(--body);
+    --wob: 18px 7px 16px 8px / 8px 16px 7px 18px;
+    --wob-card: 22px 10px 26px 12px / 12px 24px 10px 22px;
+    --sk: 2px 3px 0 rgba(58, 42, 34, .85);
+    --sk-soft: 3px 4px 0 rgba(58, 42, 34, .16);
+    --wave: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='10' viewBox='0 0 40 10'%3E%3Cpath d='M0 5 Q10 0 20 5 T40 5' fill='none' stroke='%233a2a22' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+    --wave-red: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='8' viewBox='0 0 24 8'%3E%3Cpath d='M0 4 Q6 0 12 4 T24 4' fill='none' stroke='%23d23a2f' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E");
+  }
+  body {
+    font-size: 16px;
+    background-color: var(--paper);
+    background-image: radial-gradient(rgba(122, 82, 50, .07) 1px, transparent 1.2px);
+    background-size: 18px 18px;
+  }
+  h2 { font-size: 20px; }
+
+  /* 頁首：招牌＋BAR 標語 */
+  .top { position: relative; background: transparent; color: var(--ink); padding: 18px 20px 26px; overflow: hidden; }
+  .top::after { content: ""; position: absolute; left: 0; right: 0; bottom: 6px; height: 10px; background: var(--wave) repeat-x; opacity: .7; }
+  .top-inner { gap: 22px; flex-wrap: nowrap; position: relative; z-index: 1; }
+  .sign { width: 168px; height: auto; flex: none; transform: rotate(-4deg); filter: drop-shadow(3px 4px 0 rgba(58, 42, 34, .15)); }
+  .top .motto { color: var(--ink); margin: 0 0 6px; font-size: 21px; line-height: 1.3; letter-spacing: .01em; }
+  .motto span { display: block; }
+  .motto b { color: var(--bar-red); font-size: 1.3em; font-weight: 700; margin-right: 1px; }
+  .top h1 { font-size: 21px; font-weight: 700; color: var(--ink); }
+  .top h1 #spaceName { color: var(--bar-orange); }
+  .top p#placeLine { color: var(--ink-soft); font-size: 14px; }
+  .top p#placeLine::before { content: "DHJH"; display: inline-block; margin-right: 8px; padding: 0 8px; font-size: 12px; font-weight: 700; letter-spacing: .08em; color: var(--bar-orange); border: 1.5px solid var(--bar-orange); border-radius: var(--wob); vertical-align: 1px; }
+  .doodle { position: absolute; right: 18px; top: 10px; width: 150px; height: auto; opacity: .9; pointer-events: none; }
+
+  /* 分頁列 */
+  .tabbar { background: transparent; border-bottom: 0; }
+  .tab { font-size: 16px; color: var(--ink-soft); border-bottom: 0; padding-bottom: 12px; }
+  .tab[aria-selected="true"] { color: var(--ink); background: var(--wave-red) repeat-x left bottom 2px; }
+
+  /* 週列與按鈕：手繪框 */
+  .day, .navbtn { border: 1.5px solid var(--ink); border-radius: var(--wob); background: var(--surface); box-shadow: var(--sk-soft); }
+  .day.weekend { background: #f3ebde; }
+  .day.today b { color: var(--bar-red); text-decoration: underline wavy var(--bar-red) 1.5px; text-underline-offset: 4px; }
+  .day[aria-pressed="true"] { background: var(--teal); border-color: var(--teal); color: #fff8ec; box-shadow: var(--sk); }
+  .day[aria-pressed="true"] small { color: #e9d3b0; }
+  .day .dots i { background: var(--bar-orange); }
+  #dayTitle { text-decoration: underline wavy var(--bar-orange) 1.5px; text-underline-offset: 7px; text-decoration-skip-ink: none; }
+
+  .btn { border: 1.5px solid var(--ink); border-radius: var(--wob); background: var(--surface); box-shadow: var(--sk); transition: transform .12s, box-shadow .12s; }
+  .btn:hover { transform: rotate(-1deg); }
+  .btn:active { transform: translate(1px, 2px); box-shadow: 1px 1px 0 rgba(58, 42, 34, .85); }
+  .btn.primary { background: var(--teal); border-color: var(--ink); color: #fff8ec; }
+  .btn.primary:hover { background: #5b382a; }
+  .btn.danger { color: var(--err); border-color: var(--err); }
+  .link { color: var(--ink-soft); text-decoration-style: wavy; text-underline-offset: 4px; }
+
+  /* 時間表 */
+  .grid-wrap { border: 2px solid var(--ink); border-radius: var(--wob-card); box-shadow: var(--sk-soft); background: var(--surface); }
+  .ghead { background: #fff6e8; border-bottom: 1.5px dashed #b49a82; }
+  .gzones div { font-size: 15px; border-left: 1.5px dashed #d8c6ae; }
+  .tcol, .col { border-left: 1.5px dashed #e2d2bc; }
+  .tcell, .hline { border-top: 1px dashed #efe3d2; }
+  .tcell.hour, .hline.hour { border-top: 1px solid #e2d2bc; }
+  .pcell { background: #f2e3cd; color: var(--teal); border-radius: 10px 5px 9px 6px / 6px 9px 5px 10px; }
+  .pcell.brk { background: #ede7d8; color: #7a6a48; }
+  .closed { background: repeating-linear-gradient(-45deg, #f2ebdf 0 6px, #fbf6ee 6px 12px); }
+  .col:hover { background: rgba(200, 105, 42, .07); }
+  .ev { border-radius: 10px 4px 9px 5px / 5px 9px 4px 10px; box-shadow: inset 0 0 0 1px rgba(58, 42, 34, .16); }
+  .nowline { border-top: 2px dashed var(--bar-red); }
+
+  /* 卡片、表單、對話框 */
+  .panel { border: 2px solid var(--ink); border-radius: var(--wob-card); box-shadow: var(--sk-soft); }
+  input[type=text], input[type=email], input[type=password], input[type=date], input[type=tel], input[type=number], select, textarea {
+    border: 1.5px solid #8b7262; border-radius: 10px 4px 9px 5px / 5px 9px 4px 10px; background: #fffdf8;
+  }
+  .chip span, .ztab, .pchip { border: 1.5px solid var(--ink); border-radius: var(--wob); background: var(--surface); }
+  .chip input:checked + span, .ztab[aria-pressed="true"], .pchip.on { background: var(--teal); border-color: var(--teal); color: #fff8ec; }
+  .pchip.on small { color: #e9d3b0; }
+  .pchip.full { background: #f3ebde; }
+  dialog { border: 2.5px solid var(--ink); border-radius: var(--wob-card); background: var(--surface); box-shadow: 4px 6px 0 rgba(58, 42, 34, .35); }
+  dialog::backdrop { background: rgba(58, 42, 34, .45); }
+  .dlg-head { background: var(--surface); border-bottom: 1.5px dashed #b49a82; }
+  .dlg-head h2 { text-decoration: underline wavy var(--bar-orange) 1.5px; text-underline-offset: 6px; }
+  #bookForm .dlg-foot { background: var(--surface); }
+  .rules li { background: #faf1e2; }
+  .done .big { color: var(--bar-red); }
+  #toast { background: var(--teal); border-radius: var(--wob); }
+  .poster { border: 2px solid var(--ink); border-radius: var(--wob-card); }
+  table.data th { color: var(--ink-soft); }
+
+  /* 頁尾 */
+  footer { color: var(--ink-soft); font-size: 13px; }
+  footer .sig { margin: 6px 0 4px; }
+  footer .sig b { color: var(--bar-red); }
+
+  @media (max-width: 640px) {
+    body { font-size: 15px; }
+    .top { padding: 12px 14px 20px; }
+    .top::after { bottom: 4px; }
+    .top-inner { gap: 10px; }
+    .sign { width: 92px; transform: rotate(-4deg); }
+    .top .motto { font-size: 13.5px; margin-bottom: 3px; }
+    .motto span { display: inline; }
+    .motto b { font-size: 1.2em; }
+    .top h1 { font-size: 16px; }
+    .top p#placeLine { font-size: 12px; }
+    .top p#placeLine::before { display: none; }
+    .doodle { display: none; }
+    .tab { font-size: 15px; }
+    .btn { box-shadow: 1.5px 2px 0 rgba(58, 42, 34, .85); }
+  }
 </style>
 </head>
 <body>
 <div class="linetip" id="lineTip" hidden>你正在 LINE 裡開啟。若無法預約，請點右上角「⋯」→「用預設瀏覽器開啟」。</div>
 <header class="top">
+  <svg class="doodle" viewBox="0 0 150 70" aria-hidden="true">
+    <g fill="#6b4226"><ellipse cx="22" cy="40" rx="9" ry="13" transform="rotate(-28 22 40)"/><ellipse cx="62" cy="18" rx="7" ry="10" transform="rotate(20 62 18)"/><ellipse cx="104" cy="44" rx="8" ry="12" transform="rotate(-12 104 44)"/><ellipse cx="136" cy="16" rx="6" ry="9" transform="rotate(35 136 16)"/></g>
+    <g fill="none" stroke="#e9d3b0" stroke-width="1.8" stroke-linecap="round"><path d="M27 29 C 18 36, 26 44, 17 51"/><path d="M60 9 C 66 15, 58 21, 64 27"/><path d="M106 33 C 99 40, 109 48, 102 55"/><path d="M132 9 C 140 13, 132 19, 140 23"/></g>
+    <path d="M36 58 C 56 50, 70 64, 90 56" fill="none" stroke="#c8692a" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="3 5"/>
+  </svg>
   <div class="top-inner">
-    <span class="bubble" id="spaceName">聊聊吧！</span>
+    <img class="sign" src="sign.webp" width="360" height="300" alt="聊聊BAR 招牌：東湖國中 DHJH，一杯拿鐵與咖啡豆">
     <div>
-      <h1 id="title">親師交流空間 線上預約</h1>
+      <p class="motto" lang="en"><span><b>B</b>ring</span> <span><b>A</b> cup of coffee and</span> <span><b>R</b>efresh here.</span></p>
+      <h1 id="title"><span id="spaceName">聊聊吧！</span>親師交流空間・線上預約</h1>
       <p id="placeLine">載入中…</p>
     </div>
   </div>
@@ -433,7 +565,7 @@
   </section>
 </main>
 
-<footer><button class="link" id="adminLink">總務處管理</button></footer>
+<footer><p class="sig">☕ <b>B</b>ring <b>A</b> cup of coffee and <b>R</b>efresh here.</p><p class="sig">臺北市立東湖國民中學 總務處・DHJH</p><button class="link" id="adminLink">總務處管理</button></footer>
 
 <!-- 預約視窗 -->
 <dialog id="bookDlg" aria-labelledby="bookTitle">
