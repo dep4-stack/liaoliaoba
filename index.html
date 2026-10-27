@@ -258,6 +258,30 @@
     .dlg-body { padding: 14px 14px 18px; }
     .chip span { padding: 7px 12px; }
   }
+  /* ---------- 手機版優化 ---------- */
+  .legend-toggle { display: none; }
+  @media (max-width: 640px) {
+    /* 頁首縮小，時間表會早一點出現 */
+    .top { padding: 12px 16px 14px; }
+    .top-inner { gap: 12px; flex-wrap: nowrap; }
+    .bubble { font-size: 24px; padding: 8px 12px 7px; border-radius: 14px; flex: none; }
+    .bubble::after { left: 14px; bottom: -9px; border-left-width: 5px; border-right-width: 9px; border-top-width: 10px; }
+    .top h1 { font-size: 16px; }
+    .top p { font-size: 12px; }
+    .tab { padding: 10px 12px 8px; }
+    main { padding-top: 12px; }
+    /* 顏色說明預設收合，點一下才展開 */
+    .legend-toggle { display: inline-block; margin: 0 0 8px; }
+    .legend.collapsed { display: none; }
+    /* 區域按鈕平均分成一排，不用左右滑 */
+    .zonetabs { display: grid; grid-template-columns: repeat(var(--zn, 4), minmax(0, 1fr)); gap: 4px; overflow: visible; padding-bottom: 0; }
+    .ztab { padding: 8px 2px; font-size: 13px; text-align: center; overflow: hidden; text-overflow: ellipsis; }
+    /* 時間表完整展開，跟著整頁一起捲動（區域名稱會黏在畫面最上方） */
+    .grid-wrap { overflow: hidden; overflow: clip; }
+    /* 預約視窗的送出按鈕固定在底部 */
+    #bookForm .dlg-foot { position: sticky; bottom: 0; z-index: 2; background: #fff; margin: 8px -14px -18px; padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); }
+    #bookForm .dlg-foot .btn { flex: 1; }
+  }
   @media (prefers-reduced-motion: reduce) { #toast { transition: none; } }
 </style>
 </head>
@@ -294,7 +318,8 @@
       <button class="btn small" id="todayBtn">回到今天</button>
       <button class="btn primary" id="newBtn">預約這一天</button>
     </div>
-    <div class="legend" id="legend"></div>
+    <button class="link legend-toggle" id="legendToggle" aria-expanded="false" aria-controls="legend">顯示顏色說明 ▾</button>
+    <div class="legend collapsed" id="legend"></div>
     <div class="zonetabs" id="zoneTabs"></div>
     <div class="grid-wrap"><div class="grid" id="grid"><div class="loading">載入預約狀況…</div></div></div>
     <p class="hint">以節為單位預約。點時間表的空白處，就會帶入該區域與節次。斜線底色為不開放的時段（假日與開放時間外）。</p>
@@ -579,6 +604,11 @@
   });
   $('newBtn').addEventListener('click', () => openBooking({ date: state.date }));
   $('zoneTabs').addEventListener('click', e => { const b = e.target.closest('.ztab'); if (!b) return; state.zoneView = b.dataset.zone; renderGrid(); });
+  $('legendToggle').addEventListener('click', () => {
+    const open = $('legend').classList.toggle('collapsed') === false;
+    $('legendToggle').setAttribute('aria-expanded', open);
+    $('legendToggle').textContent = open ? '收起顏色說明 ▴' : '顯示顏色說明 ▾';
+  });
 
   function dayItems() {
     const w = state.week || { bookings: [], blocks: [] };
@@ -594,7 +624,7 @@
   function renderGrid() {
     const c = state.cfg; if (!c) return;
     if (c.zones.indexOf(state.zoneView) < 0) state.zoneView = c.zones[0];
-    $('zoneTabs').innerHTML = c.zones.map(z => '<button class="ztab" data-zone="' + esc(z) + '" aria-pressed="' + (z === state.zoneView) + '">' + esc(z) + '</button>').join('');
+    $('zoneTabs').style.setProperty('--zn', c.zones.length); $('zoneTabs').innerHTML = c.zones.map(z => '<button class="ztab" data-zone="' + esc(z) + '" aria-pressed="' + (z === state.zoneView) + '">' + esc(z) + '</button>').join('');
     const zones = MQ.matches ? [state.zoneView] : c.zones;
     const shown = z => z === c.fullArea || zones.indexOf(z) >= 0 || c.zones.indexOf(z) < 0;
     const all = dayItems(), items = { bookings: all.bookings.filter(b => shown(b.zone)), blocks: all.blocks.filter(b => shown(b.zone)) };
