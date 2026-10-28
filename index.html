@@ -91,6 +91,7 @@
 
   .dayhead { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
   .dayhead h2 { margin-right: auto; }
+  .sync { font-size: 12px; color: var(--ink-soft); white-space: nowrap; }
   .check { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--ink-soft); cursor: pointer; }
 
   .btn { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 7px 16px; cursor: pointer; font-weight: 600; }
@@ -455,6 +456,7 @@
     </div>
     <div class="dayhead">
       <h2 id="dayTitle"></h2>
+      <span class="sync" id="syncNote" hidden>更新中…</span>
       <button class="btn small" id="todayBtn">回到今天</button>
       <button class="btn primary" id="newBtn">預約這一天</button>
     </div>
@@ -641,7 +643,7 @@
   const PURPOSE_CLASS = { '親師交流': 'pt', '教師共備': 'co', '領域會議': 'dm', '跨域討論': 'cr', '研習成長': 'pd', '教師會': 'ad', '家長會': 'pa', '其他': 'ot',
     '教師共備及專業對話': 'co', '行政會議': 'ad', '其他用途': 'ot' };
   const PX = 1.15; // 每分鐘高度
-  const state = { cfg: null, today: '', date: '', weekStart: '', week: null, wc: {}, auth: null, pw: '', mine: [], recId: '', pSel: [] };
+  const state = { cfg: null, today: '', date: '', weekStart: '', week: null, wc: {}, wt: {}, auth: null, pw: '', mine: [], recId: '', pSel: [] };
   const $ = id => document.getElementById(id);
   const MQ = window.matchMedia('(max-width: 640px)');
   if (MQ.addEventListener) MQ.addEventListener('change', () => renderGrid()); else MQ.addListener(() => renderGrid());
@@ -679,8 +681,48 @@
   function checked(name) { const el = document.querySelector(`input[name="${name}"]:checked`); return el ? el.value : ''; }
 
   /* ---------- 初始化 ---------- */
+  // 加速：①上次的設定與預約狀況先存在手機裡，打開就先畫出來，再背景更新
+  //       ②設定（getInitData）和本週預約（getWeek）同時抓，不必一個等一個
+  //       ③看完本週後，順便先抓上一週、下一週，切換週次時不用再等
+  const CACHE_KEY = 'chatbar-cache-v1';
+  const cache = load(CACHE_KEY) || {};
+  const cachedWeeks = cache.weeks || {};
+  const inflight = {};
+  function saveCache() {
+    const weeks = {};
+    Object.keys(state.wc).sort().slice(-6).forEach(k => weeks[k] = state.wc[k]);
+    store(CACHE_KEY, { cfg: state.cfg, weeks });
+  }
+  function localToday() {
+    try { return new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Taipei' }); }
+    catch (e) { const n = new Date(); return n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0') + '-' + String(n.getDate()).padStart(2, '0'); }
+  }
+  /** 抓某一週的預約；同一週正在抓就共用同一個請求（force = 一定重抓，例如剛新增/取消預約） */
+  function fetchWeek(ws, force) {
+    if (!force && inflight[ws]) return inflight[ws];
+    const req = api('getWeek', ws).then(w => { state.wc[ws] = w; state.wt[ws] = Date.now(); saveCache(); return w; })
+      .finally(() => { if (inflight[ws] === req) delete inflight[ws]; });
+    inflight[ws] = req;
+    return req;
+  }
+  const today0 = localToday();
+  fetchWeek(monday(today0)).catch(() => {});
+  let cfgJson = '';
+  if (cache.cfg && cache.cfg.zones) {
+    cfgJson = JSON.stringify(cache.cfg);
+    Promise.resolve().then(() => { applyInit(cache.cfg, today0); loadWeek(true); }).catch(() => { cfgJson = ''; });
+  }
   api('getInitData').then(res => {
-    state.cfg = res.config; state.today = res.today; state.date = res.today; state.weekStart = monday(res.today);
+    const j = JSON.stringify(res.config);
+    if (j !== cfgJson) { cfgJson = j; applyInit(res.config, res.today); saveCache(); loadWeek(true); }
+    else if (res.today !== state.today) {
+      if (state.date === state.today) { state.date = res.today; state.weekStart = monday(res.today); }
+      state.today = res.today; loadWeek(true);
+    }
+  }).catch(e => { if (!cfgJson) $('grid').innerHTML = `<div class="loading">無法載入：${esc(errText(e))}</div>`; });
+
+  function applyInit(cfg, today) {
+    state.cfg = cfg; state.today = today; state.date = today; state.weekStart = monday(today);
     const c = state.cfg;
     $('spaceName').textContent = c.space;
     document.title = '「' + c.space.replace(/[！!]$/, '') + '」空間預約';
@@ -703,8 +745,7 @@
     const saved = load('chatbar-me');
     if (saved && saved.email && saved.pin) { $('mEmail').value = saved.email; $('mPin').value = saved.pin; }
     if (saved && saved.email) $('xEmail').value = saved.email;
-    loadWeek();
-  }).catch(e => { $('grid').innerHTML = `<div class="loading">無法載入：${esc(errText(e))}</div>`; });
+  }
 
   /* ---------- 分頁 ---------- */
   $('tabs').addEventListener('click', e => { const b = e.target.closest('.tab'); if (b) showTab(b.dataset.tab); });
@@ -716,11 +757,28 @@
   $('adminLink').addEventListener('click', () => { $('adminTab').hidden = false; showTab('admin'); $('aPw').focus(); });
 
   /* ---------- 預約狀況 ---------- */
-  function loadWeek() {
-    $('grid').innerHTML = '<div class="loading">載入預約狀況…</div>';
-    const ws = state.weekStart;
-    return api('getWeek', ws).then(w => { state.wc[ws] = w; if (ws !== state.weekStart) return; state.week = w; renderWeek(); renderGrid(); if ($('bookDlg').open) updateRules(); })
-      .catch(e => { $('grid').innerHTML = `<div class="loading">無法載入：${esc(errText(e))}</div>`; });
+  function loadWeek(soft) {
+    const ws = state.weekStart, have = state.wc[ws] || (state.wt[ws] ? null : cachedWeeks[ws]);
+    state.week = have || null;
+    renderWeek();
+    if (have) renderGrid(); else $('grid').innerHTML = '<div class="loading">載入預約狀況…</div>';
+    if (soft && state.wc[ws] && Date.now() - state.wt[ws] < 60000) { prefetch(ws); return Promise.resolve(); }
+    $('syncNote').hidden = false;
+    return fetchWeek(ws, !soft).then(w => {
+      if (ws !== state.weekStart) return;
+      state.week = w; renderWeek(); renderGrid(); if ($('bookDlg').open) updateRules();
+      prefetch(ws);
+    }).catch(e => {
+      if (ws !== state.weekStart) return;
+      if (have) toast('預約狀況更新失敗：' + errText(e)); else $('grid').innerHTML = `<div class="loading">無法載入：${esc(errText(e))}</div>`;
+    }).finally(() => { if (ws === state.weekStart) $('syncNote').hidden = true; });
+  }
+  /** 背景先抓下一週、上一週 */
+  function prefetch(ws) {
+    const fresh = k => state.wc[k] && Date.now() - state.wt[k] < 60000;
+    const next = addDays(ws, 7), prev = addDays(ws, -7);
+    (fresh(next) ? Promise.resolve() : fetchWeek(next)).catch(() => {})
+      .then(() => fresh(prev) ? null : fetchWeek(prev)).catch(() => {});
   }
   function renderWeek() {
     const counts = {};
@@ -736,11 +794,11 @@
     $('dayTitle').textContent = niceDate(state.date) + (state.date === state.today ? '・今天' : '');
   }
   $('weekDays').addEventListener('click', e => { const b = e.target.closest('.day'); if (!b) return; state.date = b.dataset.date; renderWeek(); renderGrid(); });
-  $('prevWeek').addEventListener('click', () => { state.weekStart = addDays(state.weekStart, -7); state.date = state.weekStart; loadWeek(); });
-  $('nextWeek').addEventListener('click', () => { state.weekStart = addDays(state.weekStart, 7); state.date = state.weekStart; loadWeek(); });
+  $('prevWeek').addEventListener('click', () => { state.weekStart = addDays(state.weekStart, -7); state.date = state.weekStart; loadWeek(true); });
+  $('nextWeek').addEventListener('click', () => { state.weekStart = addDays(state.weekStart, 7); state.date = state.weekStart; loadWeek(true); });
   $('todayBtn').addEventListener('click', () => {
     state.date = state.today;
-    if (monday(state.today) !== state.weekStart) { state.weekStart = monday(state.today); loadWeek(); } else { renderWeek(); renderGrid(); }
+    if (monday(state.today) !== state.weekStart) { state.weekStart = monday(state.today); loadWeek(true); } else { renderWeek(); renderGrid(); }
   });
   $('newBtn').addEventListener('click', () => openBooking({ date: state.date }));
   $('zoneTabs').addEventListener('click', e => { const b = e.target.closest('.ztab'); if (!b) return; state.zoneView = b.dataset.zone; renderGrid(); });
@@ -849,12 +907,7 @@
   function weekOf(d) {
     const ws = monday(d);
     if (state.wc[ws]) return state.wc[ws];
-    if (!weekOf.busy) weekOf.busy = {};
-    if (!weekOf.busy[ws]) {
-      weekOf.busy[ws] = true;
-      api('getWeek', ws).then(w => { state.wc[ws] = w; if ($('bookDlg').open) updateRules(); })
-        .catch(() => {}).finally(() => { delete weekOf.busy[ws]; });
-    }
+    if (!inflight[ws]) fetchWeek(ws).then(() => { if ($('bookDlg').open) updateRules(); }).catch(() => {});
     return null;
   }
   /** 檢查某區某時段能不能登記；回傳錯誤訊息（空字串代表可以），並附上吧檯等「人數制」區域的剩餘名額 */
@@ -895,7 +948,13 @@
     $('fNote').value = ''; $('fPeople').value = ''; $('fNoteWrap').hidden = true;
     const me = load('chatbar-me');
     if (me) { $('fName').value = me.name || ''; $('fEmail').value = me.email || ''; }
-    delete state.wc[monday($('fDate').value)]; // 開視窗時重抓這一週，名額才會是最新的
+    { // 開視窗時背景重抓這一週，名額才會是最新的（30 秒內剛抓過就不重抓）
+      const k = monday($('fDate').value);
+      if (!(state.wt[k] > Date.now() - 30000)) fetchWeek(k, true).then(w => {
+        if (k === state.weekStart) { state.week = w; renderWeek(); renderGrid(); }
+        if ($('bookDlg').open) updateRules();
+      }).catch(() => {});
+    }
     updateRules();
     dlg.showModal();
     dlg.scrollTop = 0;
