@@ -467,26 +467,6 @@
     <p class="hint">以節為單位預約。點時間表的空白處，就會帶入該區域與節次。斜線底色為不開放的時段（假日與開放時間外）。</p>
   </section>
 
-  <!-- 我的預約 -->
-  <section id="tab-mine" hidden>
-    <div class="panel narrow" id="mineLogin">
-      <h3>查詢我的預約</h3>
-      <p class="hint" style="margin-top:0">輸入預約時填寫的 Email 與 4 位數密碼，就能取消預約或補填親師交流紀錄。</p>
-      <label class="field"><span>Email</span><input type="email" id="mEmail" autocomplete="email"></label>
-      <label class="field"><span>4 位數密碼</span><input type="password" id="mPin" inputmode="numeric" maxlength="4" autocomplete="off"></label>
-      <button class="btn primary" id="mLogin">查詢</button>
-      <p class="msg-err" id="mErr"></p>
-    </div>
-    <div id="mineList" hidden>
-      <div class="dayhead">
-        <h2 id="mineTitle">我的預約</h2>
-        <button class="btn small" id="mRefresh">重新整理</button>
-        <button class="btn small" id="mLogout">登出</button>
-      </div>
-      <div class="panel" id="mineItems"></div>
-    </div>
-  </section>
-
   <!-- 使用須知 -->
   <section id="tab-rules" hidden>
     <a href="rules.jpg" target="_blank" rel="noopener" title="點圖看大圖"><img class="poster" src="rules.jpg" alt="聊聊BAR 場地使用須知：使用前、使用中、使用後的注意事項" width="1920" height="1080"></a>
@@ -643,7 +623,7 @@
   const PURPOSE_CLASS = { '親師交流': 'pt', '教師共備': 'co', '領域會議': 'dm', '跨域討論': 'cr', '研習成長': 'pd', '教師會': 'ad', '家長會': 'pa', '其他': 'ot',
     '教師共備及專業對話': 'co', '行政會議': 'ad', '其他用途': 'ot' };
   const PX = 1.15; // 每分鐘高度
-  const state = { cfg: null, today: '', date: '', weekStart: '', week: null, wc: {}, wt: {}, auth: null, pw: '', mine: [], recId: '', pSel: [] };
+  const state = { cfg: null, today: '', date: '', weekStart: '', week: null, wc: {}, wt: {}, pw: '', recId: '', pSel: [] };
   const $ = id => document.getElementById(id);
   const MQ = window.matchMedia('(max-width: 640px)');
   if (MQ.addEventListener) MQ.addEventListener('change', () => renderGrid()); else MQ.addListener(() => renderGrid());
@@ -743,7 +723,6 @@
     timeOptions($('kEnd'), c.earliest, c.latest, c.close);
     renderRules();
     const saved = load('chatbar-me');
-    if (saved && saved.email && saved.pin) { $('mEmail').value = saved.email; $('mPin').value = saved.pin; }
     if (saved && saved.email) $('xEmail').value = saved.email;
   }
 
@@ -751,8 +730,7 @@
   $('tabs').addEventListener('click', e => { const b = e.target.closest('.tab'); if (b) showTab(b.dataset.tab); });
   function showTab(name) {
     document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', t.dataset.tab === name ? 'true' : 'false'));
-    ['board', 'mine', 'rules', 'cancel', 'admin'].forEach(n => $('tab-' + n).hidden = n !== name);
-    if (name === 'mine' && !state.auth && $('mEmail').value && $('mPin').value) loginMine();
+    ['board', 'rules', 'cancel', 'admin'].forEach(n => $('tab-' + n).hidden = n !== name);
   }
   $('adminLink').addEventListener('click', () => { $('adminTab').hidden = false; showTab('admin'); $('aPw').focus(); });
 
@@ -1087,54 +1065,6 @@
   $('xEmail').addEventListener('keydown', e => { if (e.key === 'Enter') $('xSend').click(); });
 
   document.addEventListener('click', e => { if (e.target.closest('[data-close]')) e.target.closest('dialog').close(); });
-
-  /* ---------- 我的預約 ---------- */
-  $('mLogin').addEventListener('click', loginMine);
-  $('mPin').addEventListener('keydown', e => { if (e.key === 'Enter') loginMine(); });
-  $('mRefresh').addEventListener('click', () => loadMine());
-  $('mLogout').addEventListener('click', () => {
-    state.auth = null; $('mPin').value = ''; $('mineList').hidden = true; $('mineLogin').hidden = false;
-    const me = load('chatbar-me'); if (me) { delete me.pin; store('chatbar-me', me); }
-  });
-  function loginMine() {
-    $('mErr').textContent = '';
-    state.auth = { email: $('mEmail').value.trim(), pin: $('mPin').value.trim() };
-    loadMine(true);
-  }
-  function loadMine(first) {
-    $('mineItems').innerHTML = '<div class="loading">讀取中…</div>';
-    if (first) { $('mineLogin').hidden = true; $('mineList').hidden = false; }
-    return api('getMyBookings', state.auth).then(list => { state.mine = list; renderMine(); })
-      .catch(e => { state.auth = null; $('mineList').hidden = true; $('mineLogin').hidden = false; $('mErr').textContent = errText(e); });
-  }
-  function renderMine() {
-    const list = state.mine;
-    $('mineTitle').textContent = list.length ? list[0].name + ' 老師的預約' : '我的預約';
-    if (!list.length) { $('mineItems').innerHTML = '<p class="empty">這個 Email 還沒有預約紀錄。到「預約狀況」點選時段就能預約。</p>'; return; }
-    const needRec = list.filter(b => b.purpose === '親師交流' && b.status === '已成立' && b.date <= state.today && !b.record).length;
-    $('mineItems').innerHTML = (needRec ? `<ul class="rules"><li class="warn">有 ${needRec} 筆親師交流尚未填寫紀錄。交流達 20 分鐘以上請補填，作為嘉獎依據。</li></ul>` : '')
-      + list.map(b => {
-        const active = b.status === '已成立' || b.status === '待審核';
-        const canCancel = active && b.date >= state.today;
-        const canRec = b.purpose === '親師交流' && b.status === '已成立' && b.date <= state.today;
-        return `<div class="booking">
-          <div><div class="when">${niceDate(b.date)} ${b.start}–${b.end}<span class="badge s-${esc(b.status)}">${esc(b.status)}</span>${b.record ? '<span class="badge rec">已填紀錄</span>' : ''}</div>
-          <div class="meta">${esc(b.zone)}・${esc(b.purpose)}${b.note ? '・' + esc(b.note) : ''}${b.people ? '・' + esc(b.people) + ' 人' : ''}${b.cat && b.cat !== '一般' ? '・' + esc(b.cat) : ''}・編號 ${esc(b.id)}</div></div>
-          <div class="acts">${canRec ? `<button class="btn small primary" data-rec="${esc(b.id)}">${b.record ? '修改紀錄' : '填寫交流紀錄'}</button>` : ''}
-            ${canCancel ? `<button class="btn small danger" data-cancel="${esc(b.id)}">取消預約</button>` : ''}</div></div>`;
-      }).join('');
-  }
-  $('mineItems').addEventListener('click', e => {
-    const c = e.target.closest('[data-cancel]'), r = e.target.closest('[data-rec]');
-    if (c) {
-      const b = state.mine.find(x => x.id === c.dataset.cancel);
-      if (!confirm(`確定取消 ${niceDate(b.date)} ${b.start}–${b.end} 的預約？`)) return;
-      c.disabled = true;
-      api('cancelBooking', state.auth, b.id).then(() => { toast('已取消預約'); loadMine(); loadWeek(); })
-        .catch(err => { c.disabled = false; toast(errText(err)); });
-    }
-    if (r) openRecord(state.mine.find(x => x.id === r.dataset.rec), 'mine');
-  });
 
   function openRecord(b, mode) {
     const c = state.cfg, rec = b.record || {};
