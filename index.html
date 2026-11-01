@@ -482,6 +482,12 @@
     .legend { font-size: 15px; }
     .pchip small { font-size: 12.5px; }
   }
+
+  /* 四個分頁在手機上維持單行 */
+  @media (max-width: 560px) {
+    .tabs { padding: 0 8px; gap: 0; }
+    .tab { font-size: 16px; padding: 10px 6px 12px; white-space: nowrap; flex: 1 1 auto; text-align: center; }
+  }
 </style>
 </head>
 <body>
@@ -506,6 +512,7 @@
     <button class="tab" role="tab" data-tab="board" aria-selected="true">預約狀況</button>
     <button class="tab" role="tab" data-tab="rules" aria-selected="false">使用須知</button>
     <button class="tab" role="tab" data-tab="cancel" aria-selected="false">取消預約</button>
+    <button class="tab" role="tab" data-tab="points" aria-selected="false">集點查詢</button>
     <button class="tab" role="tab" data-tab="admin" aria-selected="false" hidden id="adminTab">管理</button>
   </nav>
 </div>
@@ -550,6 +557,20 @@
       <ul class="rules" id="xDone" hidden></ul>
     </div>
     <p class="hint">若因故取消行程，請務必主動上網撤銷，釋出借用名額。確認信與前一天的提醒信裡，也都附有取消連結。</p>
+  </section>
+
+  <!-- 集點查詢 -->
+  <section id="tab-points" hidden>
+    <div class="panel narrow">
+      <h3>集點查詢</h3>
+      <div class="cardnote pointnote" id="pointsRule" style="margin-top:0"></div>
+      <p class="hint">輸入預約時填寫的 Email，系統會把你目前的集點明細寄到信箱。</p>
+      <label class="field"><span>Email</span><input type="email" id="pEmail" autocomplete="email"></label>
+      <button class="btn primary" id="pSend">寄送集點明細</button>
+      <p class="msg-err" id="pErr"></p>
+      <ul class="rules" id="pDone" hidden></ul>
+    </div>
+    <p class="hint">只計算「已成立且已使用完畢」的預約，並依預約時填寫的 Email 統計，請每次都用同一個 Email 預約。集滿 10 點後，請到總務處兌換咖啡包。</p>
   </section>
 
   <!-- 管理 -->
@@ -793,7 +814,9 @@
     $('fZoneHint').textContent = '各區可以分開預約、同時使用。每節名額：' + c.zones.map(z => z + ' ' + capOf(z).max + ' ' + capOf(z).unit).join('、') + '；額滿的區域無法登記。';
     $('fPurposes').innerHTML = c.purposes.map(p => `<label class="chip"><input type="radio" name="purpose" value="${esc(p)}"><span>${esc(p)}</span></label>`).join('');
     $('fNoteLabel').textContent = '（選「' + c.approvalPurpose + '」時必填，請說明用途）';
-    $('boardPoint').textContent = '☕ ' + pointText(c); $('rulesPoint').textContent = '☕ ' + pointText(c);
+    const pn = '☕ ' + esc(pointText(c)) + ' <button type="button" class="link" data-goto="points">查詢我的點數</button>';
+    $('boardPoint').innerHTML = pn; $('rulesPoint').innerHTML = pn;
+    $('pointsRule').textContent = '☕ ' + pointText(c);
     $('rCodes').innerHTML = c.codes.map((t, i) => `<label><input type="checkbox" value="${i + 1}"> ${i + 1}. ${esc(t)}</label>`).join('');
     $('fPeriods').innerHTML = (c.periods || []).map((p, i) => '<button type="button" class="pchip" data-i="' + i + '"'
       + (p.end > c.close || p.start < c.open ? ' disabled data-off="1" title="超出開放時間"' : '') + '>' + esc(p.name) + '<small>' + p.start + '–' + p.end + '</small></button>').join('');
@@ -803,16 +826,18 @@
     timeOptions($('kEnd'), c.earliest, c.latest, c.close);
     renderRules();
     const saved = load('chatbar-me');
-    if (saved && saved.email) $('xEmail').value = saved.email;
+    if (saved && saved.email) { $('xEmail').value = saved.email; $('pEmail').value = saved.email; }
   }
 
   /* ---------- 分頁 ---------- */
   $('tabs').addEventListener('click', e => { const b = e.target.closest('.tab'); if (b) showTab(b.dataset.tab); });
   function showTab(name) {
     document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', t.dataset.tab === name ? 'true' : 'false'));
-    ['board', 'rules', 'cancel', 'admin'].forEach(n => $('tab-' + n).hidden = n !== name);
+    ['board', 'rules', 'cancel', 'points', 'admin'].forEach(n => $('tab-' + n).hidden = n !== name);
   }
   $('adminLink').addEventListener('click', () => { $('adminTab').hidden = false; showTab('admin'); $('aPw').focus(); });
+  if (location.hash === '#points') showTab('points');
+  document.addEventListener('click', e => { const g = e.target.closest('[data-goto]'); if (g) { showTab(g.dataset.goto); window.scrollTo(0, 0); } });
 
   /* ---------- 預約狀況 ---------- */
   function loadWeek(soft) {
@@ -1149,6 +1174,22 @@
       .finally(() => { btn.disabled = false; btn.textContent = '寄送取消連結'; });
   });
   $('xEmail').addEventListener('keydown', e => { if (e.key === 'Enter') $('xSend').click(); });
+
+  /* ---------- 集點查詢頁 ---------- */
+  $('pSend').addEventListener('click', () => {
+    const email = $('pEmail').value.trim(), btn = $('pSend');
+    $('pErr').textContent = ''; $('pDone').hidden = true;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return $('pErr').textContent = '請填寫正確的 Email。';
+    btn.disabled = true; btn.textContent = '寄送中…';
+    api('emailMyPoints', email).then(n => {
+      $('pDone').hidden = false;
+      $('pDone').innerHTML = n
+        ? `<li class="ok">已把集點明細寄到 ${esc(email)}，請到信箱查看。</li>`
+        : `<li class="warn">${esc(email)} 目前沒有已使用的預約紀錄。請確認是否為預約時填寫的 Email。</li>`;
+    }).catch(e => { $('pErr').textContent = errText(e); })
+      .finally(() => { btn.disabled = false; btn.textContent = '寄送集點明細'; });
+  });
+  $('pEmail').addEventListener('keydown', e => { if (e.key === 'Enter') $('pSend').click(); });
 
   document.addEventListener('click', e => { if (e.target.closest('[data-close]')) e.target.closest('dialog').close(); });
 
